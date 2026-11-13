@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>
+  // GitHub Pages serves this file for any missing path, possibly from a sub-folder: make relative links resolve from the site root.
+  (function () {
+    var parts = location.pathname.split('/').filter(Boolean);
+    var root = location.hostname.endsWith('github.io') && parts.length ? '/' + parts[0] + '/' : '/';
+    var b = document.createElement('base'); b.href = root; document.head.appendChild(b);
+  })();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found · Chestnut Genotyping Project</title>
+<meta name="description" content="Page not found.">
+<meta name="theme-color" content="#133326">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<style>
+  .nf { min-height: 56vh; display: grid; place-items: center; text-align: center; padding: 80px 0; }
+  .nf .code { font: 600 14px/1 var(--mono); color: var(--forest-3); }
+  .nf h1 { font-size: clamp(30px, 4vw, 44px); margin: 12px 0 10px; }
+  .nf p { color: var(--ink-2); margin: 0 auto 26px; max-width: 520px; }
+  .nf .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+</style>
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container nf">
+  <div>
+    <div class="code">404</div>
+    <h1>This page doesn't exist</h1>
+    <p>The link may be out of date. Use the menu above, or go straight to one of these:</p>
+    <div class="actions">
+      <a class="btn" href="index.html">Overview</a>
+      <a class="btn secondary" href="submit.html">Submit trees</a>
+      <a class="btn secondary" href="map.html">Field map</a>
+    </div>
+  </div>
+</main>
+<footer id="site-footer"></footer>
+<script src="assets/chrome.js"></script>
+</body>
+</html>

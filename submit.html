@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submit trees · Chestnut Genotyping Project</title>
+<meta name="description" content="Breeders: nominate Chinese chestnut trees for DArTag genotyping by pasting from Excel, uploading a file, or entering trees one at a time.">
+<meta name="theme-color" content="#133326">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Submit trees · Chestnut Genotyping Project">
+<meta property="og:description" content="Breeders: nominate Chinese chestnut trees for DArTag genotyping by pasting from Excel, uploading a file, or entering trees one at a time.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<style>
+  main.container { padding-top: 36px; padding-bottom: 24px; }
+  .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; align-items: start; }
+  .rail { position: sticky; top: calc(var(--header-h) + 28px); }
+  .rail ol { list-style: none; margin: 0 0 28px; padding: 0; border-left: 1px solid var(--line-strong); }
+  .rail li { position: relative; padding: 0 0 22px 22px; }
+  .rail li::before { content: ""; position: absolute; left: -5px; top: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--paper); border: 1.5px solid var(--line-strong); }
+  .rail li.done::before { background: var(--forest-3); border-color: var(--forest-3); }
+  .rail li.active::before { background: var(--husk); border-color: var(--husk); box-shadow: 0 0 0 4px var(--husk-tint); }
+  .rail .k { font: 600 12.5px/1 var(--sans); color: var(--muted); }
+  .rail a { display: block; margin-top: 4px; color: var(--ink); text-decoration: none; font-weight: 500; font-size: 14.5px; }
+  .rail a:hover { color: var(--husk-2); }
+  .rail .sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .help { border-top: 1px solid var(--line); padding-top: 18px; font-size: 13.5px; color: var(--ink-2); }
+  .help h4 { font: 700 14px/1.2 var(--sans); color: var(--ink); margin: 0 0 8px; }
+  .help p { margin: 0 0 10px; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 28px 30px 30px; margin-bottom: 20px; scroll-margin-top: calc(var(--header-h) + 20px); }
+  .step { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0 0 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .step .num { font: 600 13px/1 var(--sans); color: var(--forest-3); }
+  .step h2 { margin: 6px 0 4px; font-size: 24px; line-height: 1.2; }
+  .hint { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+  .spacer { flex: 1; }
+  textarea { min-height: 180px; font: 400 13px/1.5 var(--mono); white-space: pre; resize: vertical; background: #fbfcfa; }
+
+  .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line-strong); border-radius: var(--r-sm); overflow: hidden; margin-bottom: 20px; }
+  .tab { display: flex; gap: 12px; align-items: flex-start; text-align: left; padding: 14px 16px; background: var(--surface); border: 0; border-right: 1px solid var(--line-strong); cursor: pointer; font: inherit; color: var(--ink); }
+  .tab:last-child { border-right: 0; }
+  .tab svg { width: 20px; height: 20px; flex: none; margin-top: 1px; color: var(--muted); }
+  .tab b { display: block; font-weight: 600; font-size: 14.5px; }
+  .tab span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+  .tab:hover { background: #fafbf9; }
+  .tab[aria-selected=true] { background: var(--sage); box-shadow: inset 0 -2px 0 var(--forest-2); }
+  .tab[aria-selected=true] svg { color: var(--forest-2); }
+  .panel[hidden] { display: none; }
+
+  .drop { border: 1.5px dashed var(--line-strong); border-radius: var(--r); padding: 40px 20px; text-align: center; color: var(--muted); cursor: pointer; background: #fbfcfa; transition: border-color .12s, background .12s; }
+  .drop:hover, .drop.over { border-color: var(--forest-3); background: var(--sage); }
+  .drop svg { width: 36px; height: 36px; margin: 0 auto 10px; color: var(--forest-3); }
+  .drop b { color: var(--ink); font-weight: 600; }
+
+  .note { border-radius: var(--r-sm); padding: 11px 14px; font-size: 14px; margin: 14px 0; border: 1px solid transparent; }
+  .note.info { background: var(--info-tint); border-color: #c9dbed; }
+  .note.ok { background: var(--ok-tint); border-color: #c4dccb; }
+  .note.warn { background: var(--warn-tint); border-color: #ecdca9; }
+  .note.err { background: var(--err-tint); border-color: #eec5bf; }
+
+  .tablewrap { overflow: auto; border: 1px solid var(--line); border-radius: var(--r-sm); max-height: 580px; background: #fff; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13.5px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; white-space: nowrap; }
+  thead th { position: sticky; top: 0; z-index: 1; background: #f6f7f4; font: 600 11.5px/1.3 var(--sans); color: var(--ink-2); letter-spacing: .01em; border-bottom: 1px solid var(--line-strong); }
+  tbody tr:hover td { background: #fafbf8; }
+  td[contenteditable] { min-width: 96px; cursor: text; }
+  td[contenteditable]:focus { outline: 2px solid var(--forest-3); outline-offset: -2px; background: #fff; }
+  td[data-k="treeId"] { font-family: var(--mono); font-size: 12.5px; }
+  td.e { background: var(--err-tint) !important; box-shadow: inset 2px 0 var(--err); }
+  td.w { background: var(--warn-tint) !important; box-shadow: inset 2px 0 #c99a1c; }
+  td.fixed { background: var(--info-tint) !important; }
+  td.rn { color: var(--faint); font: 400 11.5px/1.6 var(--mono); }
+  .map td, .map th { white-space: normal; }
+  .map td:first-child { font-weight: 600; }
+  .map select { min-width: 220px; }
+  .sample { color: var(--muted); font: 400 12.5px/1.45 var(--mono); }
+
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 3px; font: 600 13px/1.2 var(--sans); background: var(--sunken); color: var(--ink-2); }
+  .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .85; }
+  .chip.ok { background: var(--ok-tint); color: var(--ok); } .chip.err { background: var(--err-tint); color: var(--err); } .chip.warn { background: var(--warn-tint); color: var(--warn); } .chip.fix { background: var(--info-tint); color: var(--info); }
+  .chip.total { background: var(--ink); color: #fff; } .chip.total::before { display: none; }
+  .legend { display: inline-flex; gap: 14px; align-items: center; font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 11px; height: 11px; border-radius: 2px; display: block; }
+  details.tool { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 14px; background: #fbfcfa; }
+  details.tool summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--forest-2); }
+  .pager { display: flex; gap: 10px; align-items: center; margin-top: 12px; font: 400 13px var(--mono); color: var(--muted); }
+  .progress { height: 6px; background: var(--sunken); border-radius: 99px; overflow: hidden; margin: 14px 0 0; }
+  .progress > div { height: 100%; width: 0; background: var(--forest-3); transition: width .3s; }
+  .submitbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .submitbar #submitMsg { font-size: 14px; color: var(--ink-2); }
+
+  .fieldmap { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--line); }
+  .fm-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
+  .fm-head svg { width: 26px; height: 26px; color: var(--forest-3); flex: none; margin-top: 2px; }
+  .fm-head b { font-size: 15.5px; }
+  .fm-head .opt { font-size: 12.5px; color: var(--muted); margin-left: 6px; }
+  .fm-head p { margin: 2px 0 0; font-size: 13.5px; color: var(--muted); }
+  .fm-drop { border: 1.5px dashed var(--line-strong); border-radius: var(--r); padding: 16px 18px; cursor: pointer; background: #fbfcfa; font-size: 13.5px; color: var(--muted); display: flex; align-items: center; gap: 12px; }
+  .fm-drop:hover, .fm-drop.over { border-color: var(--forest-3); background: var(--sage); }
+  .fm-drop b { color: var(--ink); }
+  .fm-drop.has { border-style: solid; border-color: var(--forest-3); background: var(--sage); color: var(--ink); cursor: default; }
+  .fm-file { display: flex; align-items: center; gap: 12px; width: 100%; }
+  .fm-file .ic { width: 36px; height: 36px; border-radius: 4px; background: var(--forest); color: #fff; display: grid; place-items: center; font: 700 10px var(--mono); flex: none; }
+  .fm-file .nm { font-weight: 600; word-break: break-all; }
+  .fm-file .sz { font: 500 12px var(--mono); color: var(--muted); }
+  .fm-file button { margin-left: auto; }
+  .privacy { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }
+  .pv-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; }
+  .pv-head svg { width: 26px; height: 26px; color: var(--forest-3); flex: none; margin-top: 2px; }
+  .pv-head h3 { margin: 0 0 4px; font-size: 17px; }
+  .pv-head p { margin: 0; font-size: 14px; color: var(--ink-2); max-width: 760px; }
+  .pv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .pv-fixed, .pv-choice { border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; margin: 0; min-width: 0; }
+  .pv-fixed { background: var(--sunken); }
+  .pv-fixed b { display: block; margin: 6px 0 4px; font-size: 15px; }
+  .pv-fixed p { margin: 0; font-size: 13px; color: var(--muted); }
+  .pv-k { display: block; font: 700 12.5px/1.2 var(--sans); color: var(--forest-3); margin-bottom: 4px; }
+  .pv-choice legend { padding: 0; font-size: 13px; color: var(--muted); margin-bottom: 10px; float: left; width: 100%; }
+  .pv-choice .opt { clear: both; display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px 11px; margin: 0 0 8px; cursor: pointer; font-weight: 400; }
+  .pv-choice .opt:last-child { margin-bottom: 0; }
+  .pv-choice .opt b { display: block; font-size: 14px; color: var(--ink); }
+  .pv-choice .opt span { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+  .pv-choice .opt input { margin-top: 3px; }
+  .pv-choice .opt:has(input:checked) { border-color: var(--forest-3); background: var(--sage); }
+  .pv-agree { margin-top: 16px; align-items: flex-start; font-size: 14px; }
+  .pv-agree input { margin-top: 3px; }
+  @media (max-width: 860px) { .pv-grid { grid-template-columns: 1fr; } }
+  .modal { position: fixed; inset: 0; background: rgba(15,25,20,.45); display: grid; place-items: center; padding: 16px; z-index: 100; }
+  .modal[hidden] { display: none; }
+  .modal .card { max-width: 560px; width: 100%; margin: 0; box-shadow: var(--shadow-pop); }
+  .modal h3 { margin: 0 0 10px; font-size: 21px; }
+  .success { text-align: left; padding: 40px; }
+  .success .big-num { font: 800 64px/1 var(--display); letter-spacing: -.04em; color: var(--forest); }
+  .success code { font-size: 13px; background: var(--sunken); padding: 2px 6px; border-radius: 2px; }
+  .x { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 2px 4px; line-height: 0; }
+  .x:hover { color: var(--err); }
+  .x svg { width: 14px; height: 14px; }
+  #toast { font: 500 13.5px var(--sans) !important; border-radius: var(--r-sm) !important; background: var(--ink) !important; }
+
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } .rail { display: none; } }
+  @media (max-width: 640px) {
+    .card { padding: 20px 16px; }
+    .tabs { grid-template-columns: 1fr; } .tab { border-right: 0; border-bottom: 1px solid var(--line-strong); } .tab:last-child { border-bottom: 0; }
+    .success { padding: 28px 18px; }
+  }
+</style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<section class="page-head">
+  <div class="container">
+    <span class="eyebrow">Breeder submissions</span>
+    <h1>Nominate trees for genotyping</h1>
+    <p class="lede">Share the trees from your program that you would like genotyped. Paste them from a spreadsheet, upload a file, or enter them one at a time. Only a Tree ID is required; include whatever else you have.</p>
+    <div class="meta"><span id="progressPill">Connecting…</span><span>No account needed</span><span>You choose who sees results and locations</span><span>Receipt emailed on submit</span></div>
+  </div>
+</section>
+
+<main class="container" id="app">
+ <div class="layout">
+  <aside class="rail" aria-label="Steps">
+    <ol id="rail">
+      <li data-step="step1"><span class="k">Step 1</span><a href="#step1">Your details</a><div class="sub">Program, contact and data sharing</div></li>
+      <li data-step="step2"><span class="k">Step 2</span><a href="#step2">Add trees</a><div class="sub">Paste, upload or type</div></li>
+      <li data-step="step3"><span class="k">Step 3</span><a href="#step3">Review &amp; submit</a><div class="sub" id="railCount">No trees yet</div></li>
+    </ol>
+    <div class="help">
+      <h4>Working offline?</h4>
+      <p>Fill in the Excel template and upload it here with your field map, or email both to the project team.</p>
+      <button class="btn secondary" id="dlTemplate" style="width:100%">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M4.5 6.5L8 10l3.5-3.5M2.5 13.5h11"/></svg>Excel template</button>
+    </div>
+  </aside>
+
+  <div>
+  <section class="card" id="step1">
+    <div class="step"><div><span class="num">Step 1</span><h2>Your details</h2><p class="hint">Entered once and applied to every tree in this submission, including your data-sharing choices.</p></div></div>
+    <div class="grid">
+      <div><label for="program">Breeding program <span class="req">*</span></label><select id="program"></select></div>
+      <div><label for="cName">Your name <span class="req">*</span></label><input type="text" id="cName" autocomplete="name"></div>
+      <div><label for="cEmail">Email <span class="req">*</span></label><input type="email" id="cEmail" autocomplete="email"></div>
+      <div><label for="cColl">Farm, orchard or collection</label><input type="text" id="cColl" placeholder="Optional"></div>
+    </div>
+
+    <div class="privacy" id="privacy">
+      <div class="pv-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        <div><h3>Data sharing and permissions</h3><p>Choose who may see results and locations for your trees. Nothing below is shown to the general public. These apply to every tree in this submission and can be changed later by contacting the project team. <a href="policy.html" target="_blank" rel="noopener">Read the full data policy</a>.</p></div>
+      </div>
+      <div class="pv-grid">
+        <div class="pv-fixed">
+          <span class="pv-k">Raw genotype data</span>
+          <b>Released on request only</b>
+          <p>SNP calls for your trees are held by the project and are shared with others only on request and with your written permission, before any publication.</p>
+        </div>
+        <fieldset class="pv-choice">
+          <legend><span class="pv-k">Genotype visualizations</span>Ancestry, structure and relatedness plots that include your trees</legend>
+          <label class="opt"><input type="radio" name="genoVis" value="Project team only" checked><span><b>Project team only</b>Rodale Institute and Savanna Institute project staff</span></label>
+          <label class="opt"><input type="radio" name="genoVis" value="Research collaborators &amp; NNGA members"><span><b>Research collaborators &amp; NNGA members</b>Also shared with research collaborators and NNGA members (access code on this website, member reports, talks)</span></label>
+        </fieldset>
+        <fieldset class="pv-choice">
+          <legend><span class="pv-k">Phenotype visualizations</span>Charts of the trait data you provide for your trees</legend>
+          <label class="opt"><input type="radio" name="phenoVis" value="Project team only" checked><span><b>Project team only</b>Rodale Institute and Savanna Institute project staff</span></label>
+          <label class="opt"><input type="radio" name="phenoVis" value="Research collaborators &amp; NNGA members"><span><b>Research collaborators &amp; NNGA members</b>Also shared with research collaborators and NNGA members (access code on this website, member reports, talks)</span></label>
+        </fieldset>
+        <fieldset class="pv-choice">
+          <legend><span class="pv-k">Exact GPS positions</span>Surveyed location of each tree on the field map. Everyone else sees only the general site location.</legend>
+          <label class="opt"><input type="radio" name="gpsVis" value="Project team only" checked><span><b>Project team only</b>Rodale Institute and Savanna Institute project staff</span></label>
+          <label class="opt"><input type="radio" name="gpsVis" value="Research collaborators &amp; NNGA members"><span><b>Research collaborators &amp; NNGA members</b>Also shared with research collaborators and NNGA members (access code on this website, member reports, talks)</span></label>
+        </fieldset>
+      </div>
+      <label class="check pv-agree"><input type="checkbox" id="pvAgree"> <span>I agree to the project's <a href="policy.html" target="_blank" rel="noopener">data policy</a> and confirm I am authorized to submit these trees on behalf of my program. <span class="req">*</span></span></label>
+    </div>
+  </section>
+
+  <section class="card" id="step2">
+    <div class="step"><div><span class="num">Step 2</span><h2>Add your trees</h2><p class="hint">Use any method, or combine them. Trees collect in the review table until you submit.</p></div></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-panel="pPaste">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3.5" width="11" height="14" rx="1.5"/><path d="M8 3.5V2.5h5v1M8 8h5M8 11h5M8 14h3"/></svg>
+        <div><b>Paste from a spreadsheet</b><span>Copy rows with the header row, then paste</span></div></button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="pUpload">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17.5h10a1.5 1.5 0 001.5-1.5V7L12 2.5H5A1.5 1.5 0 003.5 4v12A1.5 1.5 0 005 17.5z"/><path d="M12 2.5V7h4.5M10 14V9.5M7.8 11.5L10 9.3l2.2 2.2"/></svg>
+        <div><b>Upload a file</b><span>Excel (.xlsx, .xls) or CSV</span></div></button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="pManual">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 3.5l3 3L7 16H4v-3z"/><path d="M11.5 5.5l3 3"/></svg>
+        <div><b>One at a time</b><span>A simple form for a few trees</span></div></button>
+    </div>
+
+    <div class="panel" id="pPaste">
+      <label for="pasteBox">Paste here</label>
+      <textarea id="pasteBox" placeholder="Select your table in Excel or Google Sheets (with the header row), copy, and paste here."></textarea>
+      <p class="hint">Your column names do not need to match ours. You will confirm how they line up on the next screen.</p>
+    </div>
+
+    <div class="panel" id="pUpload" hidden>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a file to upload">
+        <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 26a7 7 0 01-.8-13.95A9 9 0 0126.6 11 6.5 6.5 0 0126 26"/><path d="M18 30V17M13.5 21.5L18 17l4.5 4.5"/></svg>
+        <b>Drop a spreadsheet here, or click to choose</b>
+        <div class="hint">.xlsx, .xls, .csv or .txt. The first sheet with data is used.</div>
+        <input type="file" id="fileIn" accept=".xlsx,.xls,.csv,.txt,.tsv" hidden>
+      </div>
+    </div>
+
+    <div class="panel" id="pManual" hidden>
+      <div class="grid" id="manualFields"></div>
+      <div class="row" style="margin-top:18px">
+        <button class="btn" id="addOne"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3v10M3 8h10"/></svg>Add tree to list</button>
+        <label class="check"><input type="checkbox" id="keepVals" checked> Keep values for the next tree (only Tree ID and notes clear)</label>
+      </div>
+      <div id="manualMsg"></div>
+    </div>
+
+    <div id="mapping" hidden>
+      <hr class="rule">
+      <span class="eyebrow plain">Column matching</span>
+      <h3 style="margin:6px 0 4px;font-size:20px">Check how your columns line up</h3>
+      <p class="hint">We have matched what we could. Change any that are wrong, or choose “Skip this column”.</p>
+      <div class="note info" id="mapSummary"></div>
+      <div class="tablewrap" style="max-height:none"><table class="map"><thead><tr><th>Your column</th><th>Example values</th><th>Goes into</th></tr></thead><tbody id="mapBody"></tbody></table></div>
+      <div class="row" style="margin-top:16px">
+        <label class="check"><input type="checkbox" id="hasHeader" checked> First row is column names</label>
+        <span class="spacer"></span>
+        <button class="btn secondary" id="mapCancel">Cancel</button>
+        <button class="btn" id="mapApply">Add these trees</button>
+      </div>
+    </div>
+
+    <div class="fieldmap" id="fieldmapBox">
+      <div class="fm-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>
+        <div><b>Field map</b> <span class="opt">optional, recommended</span><p>Attach a map or planting plan of the orchard so trees can be located for sampling and GPS survey. Works with any submission method above.</p></div>
+      </div>
+      <div class="fm-drop" id="fmDrop" tabindex="0" role="button" aria-label="Attach a field map">
+        <span id="fmText"><b>Drop a file or click to attach</b> · PDF, image, Excel/CSV, KML/KMZ or zipped shapefile, up to 15 MB</span>
+        <input type="file" id="fmFile" hidden accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.gif,.webp,.heic,.xlsx,.xls,.csv,.docx,.kml,.kmz,.zip,.geojson,.json,.gpx">
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="step3">
+    <div class="step"><div><span class="num">Step 3</span><h2>Review and submit</h2><p class="hint">Click any cell to edit it. Red cells must be fixed before submitting; amber cells are worth a second look.</p></div></div>
+    <div id="emptyMsg" class="note info">No trees added yet. Use step 2 above.</div>
+    <div id="reviewArea" hidden>
+      <div class="chips" id="chips"></div>
+      <details class="tool">
+        <summary>Fill a column for many trees at once</summary>
+        <div class="row" style="margin-top:12px">
+          <select id="fillCol" style="max-width:240px"></select>
+          <input type="text" id="fillVal" placeholder="Value" style="max-width:260px" list="fillList">
+          <datalist id="fillList"></datalist>
+          <label class="check"><input type="checkbox" id="fillOverwrite"> Overwrite cells that already have a value</label>
+          <button class="btn secondary" id="fillGo">Apply</button>
+        </div>
+        <p class="hint">Useful for seedling families: set State, Field Name, Maternal Parent or Planted Year for every tree in one step.</p>
+      </details>
+      <div class="row" style="margin:16px 0 10px">
+        <label class="check"><input type="checkbox" id="onlyProblems"> Show only rows that need attention</label>
+        <span class="spacer"></span>
+        <span class="legend"><span><i style="background:var(--err-tint);border:1px solid var(--err)"></i>Must fix</span><span><i style="background:var(--warn-tint);border:1px solid #c99a1c"></i>Check</span><span><i style="background:var(--info-tint);border:1px solid #8fb3d9"></i>Auto-corrected</span></span>
+        <button class="btn ghost" id="clearAll">Clear list</button>
+      </div>
+      <div class="tablewrap"><table><thead id="revHead"></thead><tbody id="revBody"></tbody></table></div>
+      <div class="pager" id="pager"></div>
+      <div class="submitbar">
+        <div id="submitMsg"></div>
+        <span class="spacer"></span>
+        <button class="btn big" id="submitBtn" disabled>Submit trees</button>
+      </div>
+      <div class="progress" id="prog" hidden><div></div></div>
+    </div>
+  </section>
+
+  <section class="card success" id="done" hidden></section>
+  </div>
+ </div>
+</main>
+
+<footer id="site-footer"></footer>
+<div class="modal" id="modal" hidden><div class="card" id="modalBody"></div></div>
+<script src="assets/chrome.js"></script>
+<script>
+/* ============================ state ============================ */
+var CONTACT = (window.CHESTNUT_CONFIG || {}).CONTACT_EMAIL || 'the project team';
+var CFG = null, FIELDS = [], LISTS = {}, ROWS = [], PAGE = 0, PAGE_SIZE = 100, PENDING = null;
+var FIELD_ORDER_EXCLUDE = { submitter: 1, email: 1 }; // these come from step 1
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+/* ============================ header matching ============================ */
+var ALIASES = {
+  treeId: ['program tree id', 'tree id', 'treeid', 'id', 'tree', 'tree name', 'accession', 'accession id', 'selection', 'cultivar', 'variety', 'name', 'sample', 'sample id', 'sample name', 'genotype', 'clone', 'plant id', 'label', 'tag', 'tree #', 'tree number', 'tree no'],
+  collection: ['farm / orchard / collection', 'farm', 'orchard', 'collection', 'farm name', 'program / collection', 'grower', 'owner'],
+  species: ['reported species', 'species', 'taxon', 'taxa', 'species/hybrid'],
+  material: ['material type', 'material', 'type', 'category', 'tree type'],
+  crossType: ['cross type', 'cross', 'pollination', 'pollination type', 'cross method'],
+  mother: ['maternal parent', 'mother', 'mom', 'female', 'female parent', 'seed parent', 'maternal', 'dam', 'mother tree', 'seed source'],
+  father: ['paternal parent', 'father', 'dad', 'male', 'male parent', 'pollen parent', 'paternal', 'sire', 'pollen', 'pollinizer'],
+  origin: ['original source / breeder', 'original source', 'source', 'origin', 'breeder', 'nursery', 'provenance', 'bred by'],
+  state: ['state', 'st', 'state/province', 'province'],
+  town: ['town', 'city', 'municipality', 'township', 'nearest town'],
+  field: ['field name', 'field', 'block', 'orchard block', 'planting', 'site', 'trial', 'site name'],
+  position: ['tree position (row-column)', 'tree position (row-tree)', 'tree position', 'position', 'row-tree', 'row/tree', 'row tree', 'rowtree', 'plot', 'location', 'tree position (col-row)', 'col-row'],
+  _row: ['row', 'row #', 'row number', 'row no'],
+  _tree: ['tree', 'tree in row', 'tree position in row', 'col', 'column', 'position in row'],
+  lat: ['latitude', 'lat', 'gps lat', 'gps latitude', 'y'],
+  lon: ['longitude', 'lon', 'long', 'lng', 'gps lon', 'gps long', 'gps longitude', 'x'],
+  _latlon: ['gps', 'coordinates', 'coords', 'lat/long', 'lat/lon', 'lat, long', 'gps coordinates'],
+  year: ['planted year', 'year planted', 'planting year', 'year', 'planted', 'plant year', 'year established'],
+  priority: ['breeder priority', 'priority', 'importance'],
+  traits: ['trait data collected?', 'trait data collected', 'trait data', 'phenotyped', 'data collected', 'phenotype data'],
+  notes: ['key traits / notes', 'notes', 'note', 'comments', 'comment', 'key traits', 'traits', 'description', 'remarks']
+};
+var PSEUDO = { _row: 'Row number (combined into Tree Position)', _tree: 'Tree # in row (combined into Tree Position)', _latlon: 'GPS "lat, long" in one column' };
+function nh(s) { return String(s || '').toLowerCase().replace(/\*/g, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+function guessField(header, taken) {
+  var h = nh(header);
+  if (!h) return '';
+  var keys = Object.keys(ALIASES);
+  for (var i = 0; i < keys.length; i++) if (!taken[keys[i]] && ALIASES[keys[i]].indexOf(h) >= 0) return keys[i];
+  // loose contains-match for longer headers
+  for (var j = 0; j < keys.length; j++) {
+    var k = keys[j]; if (taken[k]) continue;
+    if (ALIASES[k].some(function (a) { return a.length > 3 && (h.indexOf(a) >= 0); })) return k;
+  }
+  return '';
+}
+
+/* ============================ value normalization ============================ */
+var STATES = { alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA', colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA', hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA', kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD', massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', ohio: 'OH', oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT', virginia: 'VA', washington: 'WA', 'west virginia': 'WV', wisconsin: 'WI', wyoming: 'WY', ontario: 'ON', quebec: 'QC', 'british columbia': 'BC', 'district of columbia': 'DC' };
+function normSpecies(v) {
+  var s = v.toLowerCase().replace(/castanea/g, 'c.').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  if (/^(unk|unknown|\?|n\/?a|na)$/.test(s)) return 'Unknown';
+  var hy = /( x |×|hybrid|b\dF\d|bc\d|interspecific|\bf1\b)/i.test(s);
+  var has = function (re) { return re.test(s); };
+  var dent = has(/dentata|american/), moll = has(/mollissima|chinese/), sat = has(/sativa|european/), cren = has(/crenata|japanese/);
+  if (hy || [dent, moll, sat, cren].filter(Boolean).length > 1) {
+    if (dent && moll) return 'C. dentata × C. mollissima';
+    if (sat && cren) return 'C. sativa × C. crenata';
+    if (/euro.?jap/.test(s)) return 'C. sativa × C. crenata';
+    return 'Other hybrid';
+  }
+  if (/euro.?jap/.test(s)) return 'C. sativa × C. crenata';
+  if (moll) return 'C. mollissima'; if (dent) return 'C. dentata'; if (sat) return 'C. sativa'; if (cren) return 'C. crenata';
+  if (has(/henryi/)) return 'C. henryi'; if (has(/seguinii/)) return 'C. seguinii'; if (has(/pumila|chinquapin|chinkapin/)) return 'C. pumila';
+  return null;
+}
+function normCross(v) {
+  var s = v.toLowerCase().trim(); if (!s) return '';
+  if (/^(op|o\.p\.?)$|open|half.?sib|free/.test(s)) return 'Open-Pollinated (OP)';
+  if (/control|^cc$|hand|full.?sib|bagged|^cross(ed)?$|^c$/.test(s)) return 'Controlled Cross';
+  if (/wild|feral|natural/.test(s)) return 'Wild / Unknown Parentage';
+  if (/unk|^\?$|^n\/?a$/.test(s)) return 'Unknown';
+  return null;
+}
+function normMaterial(v) {
+  var s = v.toLowerCase().trim(); if (!s) return '';
+  if (/cultivar|named|graft|variety|clone|clonal/.test(s)) return 'Named Cultivar (grafted)';
+  if (/advanced|selection|select/.test(s)) return 'Advanced Selection';
+  if (/seedling|progeny|offspring/.test(s)) return 'Seedling';
+  if (/parent/.test(s)) return 'Breeding Parent';
+  if (/species|reference|ref/.test(s)) return 'Species Reference';
+  if (/wild|feral/.test(s)) return 'Wild / Feral Tree';
+  return null;
+}
+function normPriority(v) { var s = v.toLowerCase().trim(); if (!s) return ''; if (/^(h|high|1|top)/.test(s)) return 'High'; if (/^(m|med|medium|2)/.test(s)) return 'Medium'; if (/^(l|low|3)/.test(s)) return 'Low'; return null; }
+function normYesNo(v) { var s = v.toLowerCase().trim(); if (!s) return ''; if (/^(y|yes|true|x|1|✓)$/.test(s) || /^yes/.test(s)) return 'Yes'; if (/^(n|no|false|0|none)$/.test(s)) return 'No'; if (/unk|^\?$/.test(s)) return 'Unknown'; return null; }
+function normState(v) { var s = v.trim(); if (!s) return ''; var up = s.toUpperCase().replace(/\./g, ''); if (LISTS.states && LISTS.states.indexOf(up) >= 0) return up; var full = STATES[s.toLowerCase()]; return full || null; }
+var LIST_NORMALIZERS = { species: normSpecies, crossType: normCross, materialType: normMaterial, priority: normPriority, yesNo: normYesNo, states: normState };
+
+function num(v) { var s = String(v).trim().replace(/[°NnEe]/g, ''); if (!s) return NaN; var neg = /[SsWw]$/.test(s); s = s.replace(/[SsWw]$/, ''); var n = Number(s); return neg ? -Math.abs(n) : n; }
+
+/** Normalizes one row in place and returns {errors:{key:msg}, warns:{key:msg}, fixed:{key:msg}}. */
+function checkRow(r, dupSet) {
+  var res = { errors: {}, warns: {}, fixed: {} };
+  FIELDS.forEach(function (f) {
+    var raw = r[f.key] == null ? '' : String(r[f.key]).trim();
+    r[f.key] = raw;
+    if (f.list && raw) {
+      var exact = LISTS[f.list].indexOf(raw) >= 0;
+      if (!exact) {
+        var n = LIST_NORMALIZERS[f.list] ? LIST_NORMALIZERS[f.list](raw) : null;
+        if (n) { r[f.key] = n; res.fixed[f.key] = '“' + raw + '” → ' + n; }
+        else res.warns[f.key] = 'Not one of the standard options — will be kept as typed. Options: ' + LISTS[f.list].join(', ');
+      }
+    }
+  });
+  if (!r.treeId) res.errors.treeId = 'Tree ID is required';
+  else if (dupSet && dupSet[r.treeId.toLowerCase().replace(/\s+/g, '')] > 1) res.errors.treeId = 'This Tree ID appears more than once in your list';
+  ['lat', 'lon'].forEach(function (k) {
+    if (!r[k]) return;
+    var n = num(r[k]);
+    if (isNaN(n)) { res.warns[k] = 'Should be decimal degrees, e.g. 40.5123'; return; }
+    if (k === 'lon' && n > 0 && n <= 180 && (!r.state || /^[A-Z]{2}$/.test(r.state))) { n = -n; res.fixed[k] = 'Made negative (west of Greenwich)'; }
+    var ok = k === 'lat' ? (n >= 15 && n <= 60) : (n >= -170 && n <= -50);
+    if (!ok) res.warns[k] = 'Outside North America — please double-check';
+    r[k] = String(Math.round(n * 1e6) / 1e6);
+  });
+  if (r.lat && !r.lon) res.warns.lon = 'Latitude given without longitude';
+  if (r.lon && !r.lat) res.warns.lat = 'Longitude given without latitude';
+  if (r.year) {
+    var m = String(r.year).match(/(19|20)\d{2}/);
+    if (m && m[0] !== r.year) { res.fixed.year = '“' + r.year + '” → ' + m[0]; r.year = m[0]; }
+    if (!m || +m[0] > new Date().getFullYear() + 1) res.warns.year = 'Should be a 4-digit year';
+  }
+  return res;
+}
+function revalidateAll() {
+  var counts = {};
+  ROWS.forEach(function (r) { var k = String(r.data.treeId || '').toLowerCase().replace(/\s+/g, ''); if (k) counts[k] = (counts[k] || 0) + 1; });
+  ROWS.forEach(function (r) { var prevFixed = r.check ? r.check.fixed : {}; r.check = checkRow(r.data, counts); Object.keys(prevFixed).forEach(function (k) { if (!r.check.fixed[k] && !r.check.errors[k] && !r.check.warns[k]) r.check.fixed[k] = prevFixed[k]; }); });
+}
+
+/* ============================ parsing ============================ */
+function parseDelimited(text) {
+  text = text.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+  var sample = text.split('\n').slice(0, 10).join('\n');
+  var delim = sample.indexOf('\t') >= 0 ? '\t' : (sample.split(';').length > sample.split(',').length ? ';' : ',');
+  var rows = [], row = [], cell = '', q = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"' && cell === '') q = true;
+    else if (c === delim) { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  row.push(cell); rows.push(row);
+  return rows.filter(function (r) { return r.some(function (c) { return String(c).trim(); }); });
+}
+function readFile(file) {
+  var name = file.name.toLowerCase();
+  var reader = new FileReader();
+  return new Promise(function (resolve, reject) {
+    reader.onerror = function () { reject(new Error('Could not read the file')); };
+    if (/\.(xlsx|xls|xlsm|ods)$/.test(name)) {
+      if (typeof XLSX === 'undefined') return reject(new Error('Excel reader did not load. Please save the file as CSV, or paste the rows instead.'));
+      reader.onload = function (e) {
+        try {
+          var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+          var best = null;
+          wb.SheetNames.forEach(function (sn) {
+            if (/instruction|readme|primer|lists?$/i.test(sn)) return;
+            var aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: false, defval: '' })
+              .filter(function (r) { return r.some(function (c) { return String(c).trim(); }); });
+            if (!best && aoa.length > 1) best = aoa;
+          });
+          resolve(best || []);
+        } catch (err) { reject(err); }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onload = function (e) { resolve(parseDelimited(e.target.result)); };
+      reader.readAsText(file);
+    }
+  });
+}
+
+/* ============================ mapping step ============================ */
+function startMapping(aoa, sourceLabel) {
+  if (!aoa || !aoa.length) { alertBox('Nothing found', 'We could not find any rows of data. Make sure you copied the cells, not just one cell.'); return; }
+  // Drop leading title rows: header row is the first row that maps ≥2 columns
+  var start = 0;
+  for (var i = 0; i < Math.min(aoa.length, 8); i++) {
+    var taken = {}, hits = 0;
+    aoa[i].forEach(function (h) { var g = guessField(h, taken); if (g) { taken[g] = 1; hits++; } });
+    if (hits >= 2) { start = i; break; }
+  }
+  aoa = aoa.slice(start);
+  var width = Math.max.apply(null, aoa.map(function (r) { return r.length; }));
+  aoa = aoa.map(function (r) { while (r.length < width) r.push(''); return r; });
+  PENDING = { aoa: aoa, source: sourceLabel };
+  var takenH = {}, hdrHits = 0;
+  var guesses = aoa[0].map(function (h) { var g = guessField(h, takenH); if (g) { takenH[g] = 1; hdrHits++; } return g; });
+  var hasHeader = hdrHits >= 1;
+  if (!hasHeader) guesses = aoa[0].map(function (_, i) { return i === 0 ? 'treeId' : ''; });
+  $('hasHeader').checked = hasHeader;
+  renderMapping(guesses);
+}
+function fieldOptions(selected) {
+  var opts = '<option value="">Skip this column</option>';
+  FIELDS.forEach(function (f) { opts += '<option value="' + f.key + '"' + (f.key === selected ? ' selected' : '') + '>' + esc(f.header) + (f.required ? ' (required)' : '') + '</option>'; });
+  Object.keys(PSEUDO).forEach(function (k) { opts += '<option value="' + k + '"' + (k === selected ? ' selected' : '') + '>' + esc(PSEUDO[k]) + '</option>'; });
+  return opts;
+}
+function renderMapping(guesses) {
+  var aoa = PENDING.aoa, hasHeader = $('hasHeader').checked;
+  var body = hasHeader ? aoa.slice(1) : aoa;
+  var html = aoa[0].map(function (h, i) {
+    var samples = body.slice(0, 3).map(function (r) { return r[i]; }).filter(function (s) { return String(s).trim(); });
+    return '<tr><td><b>' + esc(hasHeader ? (h || '(blank header)') : 'Column ' + (i + 1)) + '</b></td><td class="sample">' + esc(samples.join(' · ') || '—') + '</td><td><select data-col="' + i + '">' + fieldOptions(guesses[i]) + '</select></td></tr>';
+  }).join('');
+  $('mapBody').innerHTML = html;
+  updateMapSummary();
+  $('mapping').hidden = false;
+  $('mapping').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function currentMap() { var m = []; $('mapBody').querySelectorAll('select').forEach(function (s) { m[+s.dataset.col] = s.value; }); return m; }
+function updateMapSummary() {
+  var m = currentMap(), n = PENDING.aoa.length - ($('hasHeader').checked ? 1 : 0);
+  var used = m.filter(Boolean).length;
+  var msg = '<b>' + n + ' rows</b> found from ' + esc(PENDING.source) + '. ' + used + ' of ' + m.length + ' columns matched.';
+  if (m.indexOf('treeId') < 0) msg += ' <b style="color:var(--err)">Please pick which column holds the Tree ID.</b>';
+  $('mapSummary').innerHTML = msg;
+  $('mapApply').disabled = m.indexOf('treeId') < 0;
+}
+function applyMapping() {
+  var m = currentMap(), hasHeader = $('hasHeader').checked;
+  var body = hasHeader ? PENDING.aoa.slice(1) : PENDING.aoa;
+  var added = 0;
+  body.forEach(function (src) {
+    var d = {}, rowPart = '', treePart = '';
+    m.forEach(function (k, i) {
+      var v = src[i] == null ? '' : String(src[i]).trim();
+      if (!k || !v) return;
+      if (k === '_row') rowPart = v;
+      else if (k === '_tree') treePart = v;
+      else if (k === '_latlon') { var parts = v.split(/[,;\s]+/).filter(Boolean); if (parts.length >= 2) { d.lat = d.lat || parts[0]; d.lon = d.lon || parts[1]; } }
+      else d[k] = d[k] ? d[k] + '; ' + v : v;
+    });
+    if ((rowPart || treePart) && !d.position) d.position = [rowPart, treePart].filter(Boolean).join('-');
+    if (!Object.keys(d).length) return;
+    ROWS.push({ data: d });
+    added++;
+  });
+  PENDING = null;
+  $('mapping').hidden = true;
+  $('pasteBox').value = '';
+  revalidateAll(); PAGE = Math.floor(Math.max(0, ROWS.length - added) / PAGE_SIZE);
+  renderReview();
+  toast(added + ' trees added to your list.');
+  $('step3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ============================ manual entry ============================ */
+function renderManual() {
+  $('manualFields').innerHTML = FIELDS.map(function (f) {
+    var id = 'm_' + f.key, lab = '<label for="' + id + '" title="' + esc(f.note) + '">' + esc(f.header) + (f.required ? ' <span class="req">*</span>' : '') + '</label>';
+    if (f.list) return '<div>' + lab + '<select id="' + id + '"><option value=""></option>' + LISTS[f.list].map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select></div>';
+    var type = (f.key === 'lat' || f.key === 'lon' || f.key === 'year') ? 'number' : 'text';
+    var ph = { lat: '40.5123', lon: '-75.7891', year: '2018', position: '14-20', treeId: 'e.g. R9-OP-112' }[f.key] || '';
+    var step = (f.key === 'lat' || f.key === 'lon') ? ' step="any"' : '';
+    return '<div' + (f.key === 'notes' ? ' style="grid-column:1/-1"' : '') + '>' + lab + '<input type="' + type + '"' + step + ' id="' + id + '" placeholder="' + ph + '"></div>';
+  }).join('');
+}
+function addManual() {
+  var d = {};
+  FIELDS.forEach(function (f) { var v = $('m_' + f.key).value.trim(); if (v) d[f.key] = v; });
+  if (!d.treeId) { $('manualMsg').innerHTML = '<div class="note err">Please enter a Tree ID.</div>'; $('m_treeId').focus(); return; }
+  ROWS.push({ data: d });
+  revalidateAll(); PAGE = Math.floor((ROWS.length - 1) / PAGE_SIZE); renderReview();
+  $('manualMsg').innerHTML = '<div class="note ok">Added <b>' + esc(d.treeId) + '</b> — ' + ROWS.length + ' trees in your list.</div>';
+  if (!$('keepVals').checked) FIELDS.forEach(function (f) { $('m_' + f.key).value = ''; });
+  else { $('m_treeId').value = ''; $('m_notes').value = ''; }
+  $('m_treeId').focus();
+}
+
+/* ============================ review table ============================ */
+function stats() {
+  var e = 0, w = 0, f = 0;
+  ROWS.forEach(function (r) { if (Object.keys(r.check.errors).length) e++; if (Object.keys(r.check.warns).length) w++; if (Object.keys(r.check.fixed).length) f++; });
+  return { e: e, w: w, f: f };
+}
+function visibleRows() {
+  var idx = ROWS.map(function (_, i) { return i; });
+  if ($('onlyProblems').checked) idx = idx.filter(function (i) { var c = ROWS[i].check; return Object.keys(c.errors).length || Object.keys(c.warns).length; });
+  return idx;
+}
+function renderReview() {
+  var has = ROWS.length > 0;
+  $('emptyMsg').hidden = has; $('reviewArea').hidden = !has;
+  updateRail();
+  if (!has) { $('submitBtn').disabled = true; return; }
+  var s = stats();
+  $('chips').innerHTML = '<span class="chip total">' + ROWS.length + ' tree' + (ROWS.length === 1 ? '' : 's') + '</span>' +
+    (s.e ? '<span class="chip err">' + s.e + ' must be fixed</span>' : '<span class="chip ok">No blocking problems</span>') +
+    (s.w ? '<span class="chip warn">' + s.w + ' to check</span>' : '') +
+    (s.f ? '<span class="chip fix">' + s.f + ' auto-corrected</span>' : '');
+  $('revHead').innerHTML = '<tr><th></th><th>#</th>' + FIELDS.map(function (f) { return '<th title="' + esc(f.note) + '">' + esc(f.header) + (f.required ? ' *' : '') + '</th>'; }).join('') + '</tr>';
+  var idx = visibleRows();
+  var pages = Math.max(1, Math.ceil(idx.length / PAGE_SIZE));
+  if (PAGE >= pages) PAGE = pages - 1;
+  var slice = idx.slice(PAGE * PAGE_SIZE, PAGE * PAGE_SIZE + PAGE_SIZE);
+  $('revBody').innerHTML = slice.map(function (i) {
+    var r = ROWS[i], c = r.check;
+    return '<tr data-i="' + i + '"><td><button class="x" title="Remove this tree" data-del="' + i + '"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" style="pointer-events:none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg></button></td><td class="rn">' + (i + 1) + '</td>' +
+      FIELDS.map(function (f) {
+        var cls = c.errors[f.key] ? 'e' : c.warns[f.key] ? 'w' : c.fixed[f.key] ? 'fixed' : '';
+        var tip = c.errors[f.key] || c.warns[f.key] || c.fixed[f.key] || '';
+        return '<td contenteditable="true" spellcheck="false" data-k="' + f.key + '" class="' + cls + '" title="' + esc(tip) + '">' + esc(r.data[f.key] || '') + '</td>';
+      }).join('') + '</tr>';
+  }).join('') || '<tr><td colspan="' + (FIELDS.length + 2) + '" class="hint" style="padding:16px">Nothing to show with this filter.</td></tr>';
+  $('pager').innerHTML = pages > 1 ? '<button class="btn secondary" data-pg="-1"' + (PAGE ? '' : ' disabled') + '>Previous</button><span>Page ' + (PAGE + 1) + ' of ' + pages + ' (' + idx.length + ' rows)</span><button class="btn secondary" data-pg="1"' + (PAGE < pages - 1 ? '' : ' disabled') + '>Next</button>' : '';
+  var okContact = contactOk();
+  $('submitBtn').disabled = !!s.e || !okContact.ok;
+  $('submitBtn').textContent = 'Submit ' + ROWS.length + ' tree' + (ROWS.length === 1 ? '' : 's');
+  $('submitMsg').innerHTML = s.e ? '<span style="color:var(--err)">Fix the red cells to enable submit.</span>' : (!okContact.ok ? '<span style="color:var(--err)">' + okContact.msg + '</span>' : 'Ready to submit to <b>' + esc(programLabel()) + '</b>' + (FIELDMAP ? ' with field map <b>' + esc(FIELDMAP.name) + '</b>' : ' · no field map attached') + ' · sharing set in step 1.');
+}
+function updateRail() {
+  var c = contactOk().ok, has = ROWS.length > 0, done = !$('done').hidden;
+  var state = { step1: c ? 'done' : 'active', step2: has ? 'done' : (c ? 'active' : ''), step3: done ? 'done' : (has ? 'active' : '') };
+  document.querySelectorAll('#rail li').forEach(function (li) { li.className = state[li.dataset.step] || ''; });
+  if ($('railCount')) $('railCount').textContent = has ? ROWS.length + ' tree' + (ROWS.length === 1 ? '' : 's') + ' in the list' : 'No trees yet';
+}
+function onCellEdit(td) {
+  var i = +td.parentNode.dataset.i, k = td.dataset.k, v = td.textContent.trim();
+  if ((ROWS[i].data[k] || '') === v) return;
+  ROWS[i].data[k] = v;
+  if (ROWS[i].check) delete ROWS[i].check.fixed[k];
+  revalidateAll(); renderReview();
+}
+function fillColumn() {
+  var k = $('fillCol').value, v = $('fillVal').value.trim(), over = $('fillOverwrite').checked, n = 0;
+  if (!k) return;
+  ROWS.forEach(function (r) { if (over || !r.data[k]) { r.data[k] = v; n++; } });
+  revalidateAll(); renderReview();
+  toast('Updated ' + n + ' trees.');
+}
+function setupFill() {
+  $('fillCol').innerHTML = '<option value="">Choose a column…</option>' + FIELDS.filter(function (f) { return f.key !== 'treeId'; }).map(function (f) { return '<option value="' + f.key + '">' + esc(f.header) + '</option>'; }).join('');
+  $('fillCol').onchange = function () { var f = FIELDS.filter(function (x) { return x.key === $('fillCol').value; })[0]; $('fillList').innerHTML = f && f.list ? LISTS[f.list].map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') : ''; };
+}
+
+/* ============================ contact + submit ============================ */
+function programLabel() { var p = CFG.programs.filter(function (x) { return x.prefix === $('program').value; })[0]; return p ? p.label : ''; }
+/* ---------- field map ---------- */
+var FIELDMAP = null, FM_MAX = 15 * 1024 * 1024;
+function setFieldMap(file) {
+  if (!file) return;
+  if (file.size > FM_MAX) { alertBox('File too large', '<p>Field maps can be up to 15 MB. Please reduce the file size, or email it to ' + CONTACT + '.</p>'); return; }
+  var r = new FileReader();
+  r.onload = function () { FIELDMAP = { name: file.name, type: file.type || 'application/octet-stream', size: file.size, data: String(r.result).split(',')[1] }; renderFieldMap(); renderReview(); };
+  r.onerror = function () { alertBox('Could not read that file', 'Please try again.'); };
+  r.readAsDataURL(file);
+}
+function renderFieldMap() {
+  var box = $('fmDrop');
+  if (!FIELDMAP) { box.classList.remove('has'); $('fmText').innerHTML = '<b>Drop a file or click to attach</b> · PDF, image, Excel/CSV, KML/KMZ or zipped shapefile, up to 15 MB'; return; }
+  box.classList.add('has');
+  var ext = (FIELDMAP.name.split('.').pop() || 'file').slice(0, 4).toUpperCase();
+  $('fmText').innerHTML = '<span class="fm-file"><span class="ic">' + esc(ext) + '</span><span><span class="nm">' + esc(FIELDMAP.name) + '</span><br><span class="sz">' + (FIELDMAP.size / 1048576).toFixed(FIELDMAP.size > 1048576 ? 1 : 2) + ' MB · will be sent with this submission</span></span><button class="btn ghost" id="fmRemove" type="button">Remove</button></span>';
+  $('fmRemove').onclick = function (e) { e.stopPropagation(); FIELDMAP = null; renderFieldMap(); renderReview(); };
+}
+
+function privacyChoice() {
+  var v = function (n) { var r = document.querySelector('input[name=' + n + ']:checked'); return r ? r.value : 'Project team only'; };
+  return { genoVis: v('genoVis'), phenoVis: v('phenoVis'), gpsVis: v('gpsVis'), agree: $('pvAgree').checked };
+}
+function contactOk() {
+  if (!$('program').value) return { ok: false, msg: 'Choose your breeding program in step 1.' };
+  if (!$('cName').value.trim()) return { ok: false, msg: 'Enter your name in step 1.' };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($('cEmail').value.trim())) return { ok: false, msg: 'Enter a valid email in step 1.' };
+  if (!$('pvAgree').checked) return { ok: false, msg: 'Accept the data policy in step 1.' };
+  return { ok: true };
+}
+async function submitAll() {
+  var c = contactOk(); if (!c.ok) { alertBox('Almost there', c.msg); return; }
+  revalidateAll(); renderReview(); if (stats().e) return;
+  var prefix = $('program').value;
+  $('submitBtn').disabled = true; $('submitMsg').textContent = 'Checking for trees already in your program…';
+  var skipExisting = false;
+  try {
+    var existing = await call('checkExisting', prefix, ROWS.map(function (r) { return r.data.treeId; }));
+    if (existing.length) {
+      var choice = await confirmBox('Some trees are already in the database',
+        '<p><b>' + existing.length + '</b> of these Tree IDs were already submitted for ' + esc(programLabel()) + ':</p><p class="sample">' + esc(existing.slice(0, 25).join(', ')) + (existing.length > 25 ? ' …' : '') + '</p><p>Skip them (recommended), or submit them again as new rows?</p>',
+        'Skip duplicates', 'Submit anyway');
+      if (choice === null) { renderReview(); return; }
+      skipExisting = choice;
+    }
+  } catch (e) { /* non-fatal: continue */ }
+
+  var contact = { name: $('cName').value.trim(), email: $('cEmail').value.trim(), collection: $('cColl').value.trim() };
+  var privacy = privacyChoice();
+  store('cc_name', contact.name); store('cc_email', contact.email); store('cc_coll', contact.collection); store('cc_prog', prefix);
+  var batchId = prefix + '-' + new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+  var rows = ROWS.map(function (r) { return r.data; });
+  var CHUNK = 400, mapping = [], skipped = [], added = 0;
+  $('prog').hidden = false;
+  try {
+    for (var i = 0; i < rows.length; i += CHUNK) {
+      $('submitMsg').textContent = 'Sending trees ' + (i + 1) + '–' + Math.min(rows.length, i + CHUNK) + ' of ' + rows.length + '…';
+      var res = await call('submitBatch', { prefix: prefix, batchId: batchId, contact: contact, rows: rows.slice(i, i + CHUNK), skipExisting: skipExisting, final: i + CHUNK >= rows.length, fieldMap: i === 0 ? FIELDMAP : null, privacy: privacy });
+      added += res.added; mapping = mapping.concat(res.mapping); skipped = skipped.concat(res.skipped);
+      $('prog').firstElementChild.style.width = Math.round(Math.min(rows.length, i + CHUNK) / rows.length * 100) + '%';
+    }
+  } catch (e) {
+    $('prog').hidden = true;
+    alertBox('Submission problem', '<p>' + esc(e.message || e) + '</p><p>' + (added ? added + ' trees were saved before the problem. ' : '') + 'Please try again, or email your spreadsheet to ' + CONTACT + '.</p>');
+    renderReview(); return;
+  }
+  showDone(added, skipped, mapping, batchId);
+}
+function showDone(added, skipped, mapping, batchId) {
+  window.__receipt = mapping;
+  ['step1', 'step2', 'step3'].forEach(function (id) { $(id).hidden = true; });
+  $('done').hidden = false; updateRail();
+  $('done').innerHTML = '<span class="eyebrow">Submission received</span><div class="big-num" style="margin-top:14px">' + added + '</div><h2 style="margin:6px 0 14px;font-size:26px">tree' + (added === 1 ? '' : 's') + ' submitted. Thank you.</h2>' +
+    '<p>Program: <b>' + esc(programLabel()) + '</b> · Batch <code>' + esc(batchId) + '</code></p>' +
+    (mapping.length ? '<p>Submission IDs <b>' + esc(mapping[0][0]) + '</b> to <b>' + esc(mapping[mapping.length - 1][0]) + '</b></p>' : '') +
+    (skipped.length ? '<p class="note warn">' + skipped.length + ' trees were skipped because they were already in the database.</p>' : '') +
+    (FIELDMAP ? '<p>Field map <b>' + esc(FIELDMAP.name) + '</b> received.</p>' : '') +
+    '<p>Data sharing: raw genotype data on request only · genotype visualizations: <b>' + esc(privacyChoice().genoVis) + '</b> · phenotype visualizations: <b>' + esc(privacyChoice().phenoVis) + '</b> · exact GPS positions: <b>' + esc(privacyChoice().gpsVis) + '</b>.</p>' +
+    '<p class="hint">A receipt has been emailed to ' + esc($('cEmail').value) + '. Download the list below to match Submission IDs to your Tree IDs when labeling leaf-tissue bags.</p>' +
+    '<div class="row" style="margin-top:20px"><button class="btn" id="dlReceipt">Download receipt (CSV)</button><button class="btn secondary" id="again">Submit more trees</button></div>';
+  $('dlReceipt').onclick = function () { download('chestnut_submission_' + batchId + '.csv', 'Submission ID,Program Tree ID\n' + mapping.map(function (m) { return m.map(csvCell).join(','); }).join('\n')); };
+  $('again').onclick = function () { location.reload(); };
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ============================ template download ============================ */
+function downloadTemplate() {
+  // Prefer the formatted template (dropdowns, notes) shipped with the site; build one in the browser if it is missing.
+  fetch('templates/chestnut_submission_template.xlsx', { method: 'HEAD' }).then(function (r) {
+    if (!r.ok) throw 0;
+    var a = document.createElement('a'); a.href = 'templates/chestnut_submission_template.xlsx'; a.download = 'chestnut_submission_template.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+  }).catch(buildTemplateInBrowser);
+}
+function buildTemplateInBrowser() {
+  var headers = FIELDS.map(function (f) { return f.header + (f.required ? ' *' : ''); });
+  var ex = { treeId: 'OP_AuCropper_02', collection: 'North Orchard', species: 'C. mollissima', material: 'Seedling', crossType: 'Open-Pollinated (OP)', mother: 'Au Cropper', father: 'Open-Pollinated / Unknown', origin: 'CIN', state: 'PA', town: 'Kutztown', field: 'North Orchard', position: '14-20', lat: '40.5123', lon: '-75.7891', year: '2016', priority: 'High', traits: 'No', notes: 'Large nuts, early ripening' };
+  var exRow = FIELDS.map(function (f) { return ex[f.key] || ''; });
+  if (typeof XLSX !== 'undefined') {
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet([headers]);
+    ws['!cols'] = FIELDS.map(function (f) { return { wch: Math.max(14, f.header.length + 2) }; });
+        var ins = [['Column', 'What to enter', 'Allowed values']].concat(FIELDS.map(function (f) { return [f.header + (f.required ? ' *' : ''), f.note, f.list ? LISTS[f.list].join(', ') : '']; }));
+    ins.push([], ['Example row'], headers, exRow);
+    ins.unshift(['Enter your trees on the Submission sheet (second tab), one row per tree. Only Program Tree ID is required. Then upload this file on the submission page or email it to ' + CONTACT + '.'], []);
+    var wi = XLSX.utils.aoa_to_sheet(ins); wi['!cols'] = [{ wch: 28 }, { wch: 90 }, { wch: 60 }];
+    XLSX.utils.book_append_sheet(wb, wi, 'Instructions');
+    XLSX.utils.book_append_sheet(wb, ws, 'Submission');
+    XLSX.writeFile(wb, 'chestnut_submission_template.xlsx');
+  } else download('chestnut_submission_template.csv', [headers].map(function (r) { return r.map(csvCell).join(','); }).join('\n'));
+}
+function csvCell(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function download(name, text) { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+
+/* ============================ dialogs ============================ */
+function alertBox(title, html) { $('modalBody').innerHTML = '<h3 style="margin-top:0">' + esc(title) + '</h3><div>' + html + '</div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" id="mOk">OK</button></div>'; $('modal').hidden = false; $('mOk').onclick = function () { $('modal').hidden = true; }; $('mOk').focus(); }
+function confirmBox(title, html, yes, no) {
+  return new Promise(function (res) {
+    $('modalBody').innerHTML = '<h3 style="margin-top:0">' + esc(title) + '</h3>' + html + '<div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" id="mCancel">Cancel</button><button class="btn secondary" id="mNo">' + esc(no) + '</button><button class="btn" id="mYes">' + esc(yes) + '</button></div>';
+    $('modal').hidden = false;
+    var done = function (v) { $('modal').hidden = true; res(v); };
+    $('mYes').onclick = function () { done(true); }; $('mNo').onclick = function () { done(false); }; $('mCancel').onclick = function () { done(null); };
+  });
+}
+var toastT; function toast(msg) { var t = $('toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2b2118;color:#fff;padding:10px 18px;border-radius:8px;z-index:20;font-size:15px'; document.body.appendChild(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 2600); }
+
+/* ============================ wiring ============================ */
+function wire() {
+  document.querySelectorAll('.tab').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('.tab').forEach(function (x) { x.setAttribute('aria-selected', x === b); $(x.dataset.panel).hidden = x !== b; });
+    };
+  });
+  $('pasteBox').addEventListener('paste', function () { setTimeout(function () { var t = $('pasteBox').value; if (t.trim()) startMapping(parseDelimited(t), 'your pasted cells'); }, 30); });
+  $('pasteBox').addEventListener('change', function () { var t = $('pasteBox').value; if (t.trim() && !PENDING) startMapping(parseDelimited(t), 'your pasted cells'); });
+  var drop = $('drop'), fileIn = $('fileIn');
+  drop.onclick = function () { fileIn.click(); };
+  drop.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileIn.click(); } };
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+  fileIn.onchange = function () { if (fileIn.files[0]) handleFile(fileIn.files[0]); fileIn.value = ''; };
+  $('mapBody').addEventListener('change', updateMapSummary);
+  $('hasHeader').onchange = function () { renderMapping(currentMap()); };
+  $('mapApply').onclick = applyMapping;
+  var fmd = $('fmDrop'), fmf = $('fmFile');
+  fmd.onclick = function (e) { if (!FIELDMAP && e.target.id !== 'fmRemove') fmf.click(); };
+  fmd.onkeydown = function (e) { if ((e.key === 'Enter' || e.key === ' ') && !FIELDMAP) { e.preventDefault(); fmf.click(); } };
+  ['dragenter', 'dragover'].forEach(function (ev) { fmd.addEventListener(ev, function (e) { e.preventDefault(); fmd.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { fmd.addEventListener(ev, function (e) { e.preventDefault(); fmd.classList.remove('over'); }); });
+  fmd.addEventListener('drop', function (e) { if (e.dataTransfer.files[0]) setFieldMap(e.dataTransfer.files[0]); });
+  fmf.onchange = function () { if (fmf.files[0]) setFieldMap(fmf.files[0]); fmf.value = ''; };
+  $('mapCancel').onclick = function () { PENDING = null; $('mapping').hidden = true; };
+  $('addOne').onclick = addManual;
+  $('manualFields').addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); addManual(); } });
+  $('revBody').addEventListener('focusout', function (e) { if (e.target.dataset && e.target.dataset.k) onCellEdit(e.target); });
+  $('revBody').addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.dataset.k) { e.preventDefault(); e.target.blur(); } });
+  $('revBody').addEventListener('paste', function (e) { if (e.target.dataset && e.target.dataset.k) { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData.getData('text/plain') || '').replace(/\s*\n\s*/g, ' ')); } });
+  $('revBody').addEventListener('click', function (e) { var d = e.target.dataset && e.target.dataset.del; if (d !== undefined) { ROWS.splice(+d, 1); revalidateAll(); renderReview(); } });
+  $('pager').addEventListener('click', function (e) { var p = e.target.dataset && e.target.dataset.pg; if (p) { PAGE += +p; renderReview(); } });
+  $('onlyProblems').onchange = function () { PAGE = 0; renderReview(); };
+  $('fillGo').onclick = fillColumn;
+  $('clearAll').onclick = async function () { if (await confirmBox('Clear the list?', '<p>This removes all ' + ROWS.length + ' trees from the review table (nothing has been submitted yet).</p>', 'Clear list', 'Keep')) { ROWS = []; renderReview(); } };
+  $('submitBtn').onclick = submitAll;
+  $('dlTemplate').onclick = downloadTemplate;
+  ['program', 'cName', 'cEmail', 'pvAgree'].forEach(function (id) { $(id).addEventListener('input', renderReview); $(id).addEventListener('change', renderReview); });
+  document.querySelectorAll('#privacy input[type=radio]').forEach(function (r) { r.addEventListener('change', function () { store('cc_' + r.name, r.value); renderReview(); }); });
+  window.addEventListener('beforeunload', function (e) { if (ROWS.length && $('done').hidden) { e.preventDefault(); e.returnValue = ''; } });
+}
+async function handleFile(file) {
+  try { var aoa = await readFile(file); startMapping(aoa, '“' + file.name + '”'); }
+  catch (e) { alertBox('Could not read that file', esc(e.message || e)); }
+}
+
+async function init() {
+  wire();
+  try { CFG = await call('getPortalConfig'); }
+  catch (e) { $('progressPill').textContent = 'Could not connect — please refresh'; alertBox('Connection problem', esc(e.message || e)); return; }
+  LISTS = CFG.lists;
+  FIELDS = CFG.columns.filter(function (c) { return !FIELD_ORDER_EXCLUDE[c.key]; });
+  FIELDS.sort(function (a, b) { return (b.key === 'treeId') - (a.key === 'treeId'); }); // Tree ID first
+  var total = CFG.programs.reduce(function (a, p) { return a + p.count; }, 0);
+  $('progressPill').textContent = total.toLocaleString() + ' trees nominated so far · goal ~' + CFG.target.toLocaleString() + ' genotypes';
+  $('program').innerHTML = '<option value="">Choose your program…</option>' + CFG.programs.map(function (p) { return '<option value="' + p.prefix + '">' + esc(p.label) + '</option>'; }).join('');
+  var want = (await getParams()).program || store('cc_prog');
+  if (want && CFG.programs.some(function (p) { return p.prefix === String(want).toUpperCase(); })) $('program').value = String(want).toUpperCase();
+  ['genoVis', 'phenoVis', 'gpsVis'].forEach(function (n) { var v = store('cc_' + n), r = v && document.querySelector('input[name=' + n + '][value="' + v + '"]'); if (r) r.checked = true; });
+  $('cName').value = store('cc_name') || ''; $('cEmail').value = store('cc_email') || ''; $('cColl').value = store('cc_coll') || '';
+  renderManual(); setupFill(); renderReview();
+}
+init();
+</script>
+</body>
+</html>

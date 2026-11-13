@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Results · Chestnut Genotyping Project</title>
+<meta name="description" content="Population structure, genetic diversity and relatedness results from DArTag genotyping of US Chinese chestnut germplasm.">
+<meta name="theme-color" content="#133326">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Results · Chestnut Genotyping Project">
+<meta property="og:description" content="Population structure, genetic diversity and relatedness results from DArTag genotyping of US Chinese chestnut germplasm.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<style>
+  main.container { padding-top: 36px; padding-bottom: 8px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 28px 30px; margin-bottom: 20px; }
+  .card-head { display: flex; justify-content: space-between; gap: 20px; align-items: flex-end; padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .card-head .num { font: 600 13px/1 var(--sans); color: var(--forest-3); }
+  .card h2 { margin: 8px 0 4px; font-size: 24px; }
+  .card-head p { margin: 0; max-width: 680px; }
+  .controls { display: flex; gap: 14px; flex-wrap: wrap; align-items: end; margin: 0 0 14px; }
+  .controls label { margin: 0; display: grid; gap: 6px; font: 600 12.5px/1 var(--sans); color: var(--muted); }
+  .controls select { min-width: 140px; font-size: 14px; padding: 8px 30px 8px 10px; }
+  .plotwrap { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 22px; }
+  svg#plot { width: 100%; height: auto; background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .legend { border-left: 1px solid var(--line); padding-left: 18px; }
+  .legend h4 { font: 700 13.5px/1 var(--sans); color: var(--ink); margin: 0 0 10px; }
+  .legend label { display: flex; gap: 9px; align-items: center; font-size: 13.5px; cursor: pointer; margin: 0; padding: 4px 0; color: var(--ink); }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+  .legend .n { margin-left: auto; color: var(--muted); font: 500 11.5px var(--mono); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; }
+  th { font: 700 13px/1.2 var(--sans); color: var(--ink-2); border-bottom: 2px solid var(--ink); }
+  td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .empty { border: 1.5px dashed var(--line-strong); border-radius: var(--r-sm); padding: 40px 20px; text-align: center; color: var(--muted); cursor: pointer; background: #fbfcfa; }
+  .empty svg { width: 40px; height: 40px; margin: 0 auto 12px; color: var(--forest-3); }
+  .empty b { color: var(--ink); font-weight: 600; }
+  .empty.over, .empty:hover { border-color: var(--forest-3); background: var(--sage); }
+  .tip { position: fixed; pointer-events: none; background: var(--ink); color: #fff; padding: 7px 10px; border-radius: var(--r-sm); font: 500 12px/1.4 var(--mono); z-index: 10; box-shadow: var(--shadow-pop); }
+  .planned { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .planned div { padding: 18px 18px 6px 0; border-right: 1px solid var(--line); font-size: 14px; color: var(--ink-2); }
+  .planned div + div { padding-left: 18px; }
+  .planned div:last-child { border-right: 0; }
+  .planned b { display: block; font: 700 17px/1.3 var(--display); color: var(--ink); margin-bottom: 6px; }
+  code { background: var(--sunken); padding: 1px 6px; border-radius: 2px; font-size: 12.5px; }
+  details summary { cursor: pointer; color: var(--forest-2); font-weight: 600; font-size: 14px; }
+  @media (max-width: 860px) { .plotwrap { grid-template-columns: 1fr; } .legend { border-left: 0; padding-left: 0; } .planned { grid-template-columns: 1fr 1fr; } .planned div:nth-child(2) { border-right: 0; } .planned div:nth-child(3) { padding-left: 0; } }
+  @media (max-width: 560px) { .card { padding: 20px 16px; } .planned { grid-template-columns: 1fr; } .planned div, .planned div + div { padding: 16px 0 4px; border-right: 0; border-bottom: 1px solid var(--line); } .card-head { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+<header id="site-header"></header>
+<section class="page-head">
+  <div class="container">
+    <span class="eyebrow">Results</span>
+    <h1>Population genomics of US Chinese chestnut</h1>
+    <p class="lede">Population structure, diversity and relatedness from DArTag genotyping, posted as each batch of plates is analyzed. Results are shown to the project team and, where breeders allow it, to research collaborators and NNGA members with an access code. Raw genotype data are available on request with breeder permission (<a href="policy.html" style="color:#fff">data policy</a>).</p>
+    <div class="meta"><span>Panel <b>DArTag Chestnut V2</b></span><span>Target sites <b>~6,500</b> (~3,283 high-MAF in <i>C. mollissima</i>)</span><span>Genotyping target <b>2,000</b></span></div>
+  </div>
+</section>
+
+<main class="container">
+  <section class="card" id="structCard">
+    <div class="card-head"><div><span class="num">Figure 1</span><h2>Population structure</h2><p class="muted small" id="structSub">Each point is one genotyped tree, placed by genome-wide similarity (PCA / MDS). Trees that sit close together share more ancestry.</p></div></div>
+    <div id="structBody"></div>
+  </section>
+
+  <section class="card" id="divCard">
+    <div class="card-head"><div><span class="num">Table 1</span><h2>Genetic diversity by population</h2><p class="muted small">Observed (H<sub>o</sub>) and expected (H<sub>e</sub>) heterozygosity and inbreeding coefficient (F) for each breeding population.</p></div></div>
+    <div id="divBody"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><span class="num">Planned</span><h2>Analyses in progress</h2></div></div>
+    <div class="planned">
+      <div><b>Population structure</b>PCA, MDS, model-based ancestry and genetic distance across breeding programs.</div>
+      <div><b>Diversity statistics</b>H<sub>o</sub>, H<sub>e</sub>, nucleotide diversity, inbreeding and F<sub>ST</sub> between programs.</div>
+      <div><b>Relatedness</b>Kinship coefficients and genomic relationship matrices to identify distinct germplasm pools.</div>
+      <div><b>Pedigree reconstruction</b>Parentage assignment and pedigree networks for cultivars with incomplete records.</div>
+    </div>
+    <details style="margin-top:20px"><summary>For the project team: publishing results</summary>
+      <p class="small">Results are kept in the project Google Sheet, not in this public repository, so breeder permissions can be enforced:</p>
+      <ul class="small">
+        <li><b>Results – Structure</b> tab: <code>sample_id, group, PC1, PC2</code> (more numeric columns become selectable axes). Database trees follow their breeder's <i>Genotype Visualization</i> setting automatically. For samples not in the database (e.g. pilot trees) use the <code>access</code> column: blank = project team only.</li>
+        <li><b>Results – Diversity</b> tab: <code>group, n, Ho, He, F</code>. Each row is project team only unless its <code>access</code> column says <i>Research collaborators &amp; NNGA members</i>, which should be set only when every breeder in that group allows it.</li>
+        <li>Never commit raw genotype files or tree-level results to the GitHub repository.</li>
+      </ul>
+      <p class="small">You can drop a CSV onto an empty panel to preview it in your own browser only.</p>
+    </details>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<div class="tip" id="tip" hidden></div>
+<script src="assets/chrome.js"></script>
+<script>
+var PALETTE = ['#2b6f8f', '#c7743a', '#4f8a5b', '#8e5ba8', '#c44e52', '#c9a227', '#3d9a9a', '#6b5b4b', '#5a7bd6', '#a3685a', '#7aa33f', '#d07fa8'];
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function parseCSV(text) {
+  var rows = [], row = [], cell = '', q = false; text = text.replace(/\r\n?/g, '\n');
+  var delim = text.split('\n')[0].indexOf('\t') >= 0 ? '\t' : ',';
+  for (var i = 0; i < text.length; i++) { var c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"' && !cell) q = true; else if (c === delim) { row.push(cell); cell = ''; } else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; } else cell += c; }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  rows = rows.filter(function (r) { return r.some(function (x) { return x.trim(); }); });
+  var h = rows.shift() || [];
+  return rows.map(function (r) { var o = {}; h.forEach(function (k, i) { o[k.trim()] = (r[i] || '').trim(); }); return o; });
+}
+function emptyState(el, msg, onFile) {
+  el.innerHTML = '<div class="empty" tabindex="0"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 34h29M6 34V6"/><circle cx="13" cy="25" r="1.8"/><circle cx="18" cy="20" r="1.8"/><circle cx="15" cy="28" r="1.8"/><circle cx="26" cy="13" r="1.8"/><circle cx="29" cy="17" r="1.8"/><circle cx="24" cy="18" r="1.8"/></svg>' + msg + '<span class="small" style="display:block;margin-top:10px">Project team: drop a CSV here to preview it locally.</span><input type="file" accept=".csv,.tsv,.txt" hidden></div>';
+  var box = el.firstChild, fi = box.querySelector('input');
+  box.onclick = function () { fi.click(); };
+  fi.onchange = function () { if (fi.files[0]) fi.files[0].text().then(function (t) { onFile(parseCSV(t), fi.files[0].name); }); };
+  ['dragenter', 'dragover'].forEach(function (e) { box.addEventListener(e, function (ev) { ev.preventDefault(); box.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (e) { box.addEventListener(e, function (ev) { ev.preventDefault(); box.classList.remove('over'); }); });
+  box.addEventListener('drop', function (ev) { var f = ev.dataTransfer.files[0]; if (f) f.text().then(function (t) { onFile(parseCSV(t), f.name); }); });
+}
+function fetchCSV(path) { return fetch(path, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(parseCSV); }
+
+/* ---------- structure scatter ---------- */
+var S = { rows: [], x: 'PC1', y: 'PC2', color: 'group', hidden: {} };
+function renderStructure(rows, source) {
+  S.rows = rows;
+  var numeric = Object.keys(rows[0] || {}).filter(function (k) { return rows.every(function (r) { return r[k] === '' || !isNaN(+r[k]); }) && !/^(n|sample|id)$/i.test(k); });
+  var cats = Object.keys(rows[0] || {}).filter(function (k) { return numeric.indexOf(k) < 0 && !/sample|^id$/i.test(k); });
+  if (numeric.indexOf(S.x) < 0) S.x = numeric[0]; if (numeric.indexOf(S.y) < 0) S.y = numeric[1] || numeric[0];
+  if (cats.indexOf(S.color) < 0) S.color = cats[0] || '';
+  var opt = function (list, sel) { return list.map(function (k) { return '<option' + (k === sel ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join(''); };
+  document.getElementById('structSub').innerHTML = rows.length.toLocaleString() + ' trees' + (source ? ' · ' + esc(source) : '') + '. Each point is one genotyped tree; trees close together share more ancestry. Hover a point for its ID.';
+  document.getElementById('structBody').innerHTML = '<div class="controls"><label>X <select id="sx">' + opt(numeric, S.x) + '</select></label><label>Y <select id="sy">' + opt(numeric, S.y) + '</select></label>' +
+    (cats.length ? '<label>Color by <select id="sc">' + opt(cats, S.color) + '</select></label>' : '') + '</div><div class="plotwrap"><svg id="plot" viewBox="0 0 720 520" role="img" aria-label="Population structure scatter plot"></svg><div class="legend"><h4>Groups</h4><div id="leg"></div></div></div>';
+  ['sx', 'sy', 'sc'].forEach(function (id) { var el = document.getElementById(id); if (el) el.onchange = function () { S[{ sx: 'x', sy: 'y', sc: 'color' }[id]] = el.value; S.hidden = {}; drawPlot(); }; });
+  drawPlot();
+}
+function drawPlot() {
+  var W = 720, H = 520, m = { l: 56, r: 16, t: 16, b: 46 };
+  var rows = S.rows.filter(function (r) { return r[S.x] !== '' && r[S.y] !== ''; });
+  var xs = rows.map(function (r) { return +r[S.x]; }), ys = rows.map(function (r) { return +r[S.y]; });
+  var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+  var px = (x1 - x0) * .05 || 1, py = (y1 - y0) * .05 || 1; x0 -= px; x1 += px; y0 -= py; y1 += py;
+  var sx = function (v) { return m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r); }, sy = function (v) { return H - m.b - (v - y0) / (y1 - y0) * (H - m.t - m.b); };
+  var groups = {}; rows.forEach(function (r) { var g = r[S.color] || 'Unassigned'; groups[g] = (groups[g] || 0) + 1; });
+  var gnames = Object.keys(groups).sort(function (a, b) { return groups[b] - groups[a]; });
+  var col = {}; gnames.forEach(function (g, i) { col[g] = PALETTE[i % PALETTE.length]; });
+  var ticks = function (a, b) { var step = Math.pow(10, Math.floor(Math.log10((b - a) / 5))); var t = []; for (var v = Math.ceil(a / step) * step; v <= b; v += step) t.push(+v.toFixed(10)); while (t.length > 8) t = t.filter(function (_, i) { return i % 2 === 0; }); return t; };
+  var g = '';
+  ticks(x0, x1).forEach(function (v) { g += '<line x1="' + sx(v) + '" x2="' + sx(v) + '" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="#e7eae5"/><text x="' + sx(v) + '" y="' + (H - m.b + 18) + '" font-size="11" font-family="IBM Plex Mono, monospace" text-anchor="middle" fill="#64716a">' + v + '</text>'; });
+  ticks(y0, y1).forEach(function (v) { g += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + sy(v) + '" y2="' + sy(v) + '" stroke="#e7eae5"/><text x="' + (m.l - 8) + '" y="' + (sy(v) + 4) + '" font-size="11" font-family="IBM Plex Mono, monospace" text-anchor="end" fill="#64716a">' + v + '</text>'; });
+  g += '<text x="' + ((W + m.l) / 2) + '" y="' + (H - 8) + '" font-size="12" font-family="IBM Plex Mono, monospace" letter-spacing="1" text-anchor="middle" fill="#16201b">' + esc(S.x) + '</text><text transform="rotate(-90)" x="' + (-(H - m.b + m.t) / 2) + '" y="16" font-size="12" font-family="IBM Plex Mono, monospace" letter-spacing="1" text-anchor="middle" fill="#16201b">' + esc(S.y) + '</text>';
+  rows.forEach(function (r, i) { var gr = r[S.color] || 'Unassigned'; if (S.hidden[gr]) return; g += '<circle data-i="' + S.rows.indexOf(r) + '" cx="' + sx(+r[S.x]).toFixed(1) + '" cy="' + sy(+r[S.y]).toFixed(1) + '" r="4" fill="' + col[gr] + '" fill-opacity=".8" stroke="#fff" stroke-width=".6"/>'; });
+  var svg = document.getElementById('plot'); svg.innerHTML = g;
+  document.getElementById('leg').innerHTML = gnames.map(function (n) { return '<label><input type="checkbox" data-g="' + esc(n) + '"' + (S.hidden[n] ? '' : ' checked') + '><span class="dot" style="background:' + col[n] + '"></span>' + esc(n) + '<span class="n">' + groups[n] + '</span></label>'; }).join('');
+  document.getElementById('leg').onchange = function (e) { var n = e.target.dataset.g; if (e.target.checked) delete S.hidden[n]; else S.hidden[n] = 1; drawPlot(); };
+  var tip = document.getElementById('tip');
+  svg.onmousemove = function (e) { var i = e.target.dataset && e.target.dataset.i; if (i === undefined) { tip.hidden = true; return; } var r = S.rows[+i]; tip.innerHTML = '<b>' + esc(r.sample_id || r.id || r.sample || '') + '</b><br>' + esc(r[S.color] || ''); tip.style.left = e.clientX + 12 + 'px'; tip.style.top = e.clientY + 12 + 'px'; tip.hidden = false; };
+  svg.onmouseleave = function () { tip.hidden = true; };
+}
+
+/* ---------- diversity table ---------- */
+function renderDiversity(rows, source) {
+  var cols = Object.keys(rows[0] || {});
+  var isNum = function (k) { return rows.every(function (r) { return r[k] === '' || !isNaN(+r[k]); }); };
+  document.getElementById('divBody').innerHTML = (source ? '<p class="muted small">' + esc(source) + '</p>' : '') + '<div style="overflow:auto"><table><thead><tr>' + cols.map(function (c) { return '<th class="' + (isNum(c) ? 'num' : '') + '">' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    rows.map(function (r) { return '<tr>' + cols.map(function (c) { var v = r[c]; return isNum(c) && v !== '' ? '<td class="num">' + (+v % 1 ? (+v).toFixed(3) : v) + '</td>' : '<td>' + esc(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+}
+
+/* Results come from the project database through the API, filtered by the viewer's access code and
+   each breeder's Genotype Visualization setting. Nothing tree-level is shown to the general public. */
+var LOCK = '<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="12" width="16" height="12" rx="2"/><path d="M10 12V9a4 4 0 018 0v3"/></svg>';
+function locked(el, n, what) {
+  el.innerHTML = '<div class="locked">' + LOCK + '<div><h4>' + n + ' ' + what + ' available to approved viewers</h4><p>Breeders choose whether their results are shared with the project team only, or also with research collaborators and NNGA members. Enter your access code to see the results released to you.</p><button class="btn" data-access>Enter access code</button> <a class="btn ghost" href="policy.html">How access works</a></div></div>';
+}
+function toCSVRows(rows) { return rows.map(function (r) { var o = {}; Object.keys(r).forEach(function (k) { o[k] = String(r[k] == null ? '' : r[k]); }); return o; }); }
+call('getResults', (window.Access && Access.code()) || '').then(function (R) {
+  var who = R.role === 'public' ? '' : ' · viewing as ' + Access.LABEL[R.role];
+  if (R.structure.length) renderStructure(toCSVRows(R.structure), 'project database' + who + (R.hidden ? ' · ' + R.hidden + ' trees not shown at the breeders\' request' : ''));
+  else if (R.totalStructure) locked(document.getElementById('structBody'), R.totalStructure, 'genotyped trees are');
+  else emptyState(document.getElementById('structBody'), '<b>No genotyping results posted yet.</b><br>The first DArTag batch is being processed; structure plots will appear here.', function (r, n) { renderStructure(r, n + ' (local preview, not published)'); });
+  if (R.diversity.length) renderDiversity(toCSVRows(R.diversity), 'project database' + who);
+  else if (R.totalDiversity) locked(document.getElementById('divBody'), R.totalDiversity, 'population summaries are');
+  else emptyState(document.getElementById('divBody'), '<b>Diversity statistics will be posted after the first analysis.</b>', function (r, n) { renderDiversity(r, n + ' (local preview, not published)'); });
+}).catch(function () {
+  ['structBody', 'divBody'].forEach(function (id) { document.getElementById(id).innerHTML = '<div class="empty">Results could not be loaded right now. Please try again later.</div>'; });
+});
+</script>
+</body>
+</html>

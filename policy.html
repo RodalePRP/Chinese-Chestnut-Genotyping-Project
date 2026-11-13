@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data policy · Chestnut Genotyping Project</title>
+<meta name="description" content="How breeder submissions, genotype data and phenotype data are shared in the Chinese chestnut genotyping project.">
+<meta name="theme-color" content="#133326">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Data policy · Chestnut Genotyping Project">
+<meta property="og:description" content="How breeder submissions, genotype data and phenotype data are shared in the Chinese chestnut genotyping project.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<style>
+  main.container { padding-top: 40px; padding-bottom: 72px; }
+  .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; align-items: start; }
+  .toc { position: sticky; top: calc(var(--header-h) + 28px); font-size: 14px; }
+  .toc b { display: block; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .toc a { display: block; padding: 6px 0 6px 12px; border-left: 2px solid var(--line); color: var(--ink-2); text-decoration: none; }
+  .toc a:hover { border-left-color: var(--forest-3); color: var(--forest); }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 40px; }
+  .pc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; border-top: 3px solid var(--forest-3); }
+  .pc .k { font: 700 12.5px/1.2 var(--sans); color: var(--forest-3); }
+  .pc h3 { margin: 8px 0 6px; font-size: 18px; }
+  .pc p { margin: 0; font-size: 14px; color: var(--ink-2); }
+  article h2 { font-size: 24px; margin: 40px 0 10px; scroll-margin-top: calc(var(--header-h) + 20px); }
+  article h2:first-child { margin-top: 0; }
+  article p, article li { color: var(--ink-2); font-size: 16px; max-width: 760px; }
+  article ul { padding-left: 20px; }
+  article li { margin: 6px 0; }
+  table.vis { border-collapse: collapse; width: 100%; max-width: 820px; font-size: 14.5px; margin: 14px 0; background: var(--surface); border: 1px solid var(--line); }
+  .vis th, .vis td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .vis th { font-weight: 700; background: #f7f8f6; }
+  .tag { display: inline-block; font: 700 12px/1 var(--sans); padding: 4px 8px; border-radius: 3px; }
+  .tag.pub { background: var(--ok-tint); color: var(--ok); } .tag.int { background: var(--sunken); color: var(--ink-2); } .tag.req { background: var(--husk-tint); color: var(--husk-2); }
+  .note { background: var(--info-tint); border: 1px solid #c9dbed; border-radius: var(--r); padding: 14px 16px; font-size: 14.5px; color: var(--ink-2); max-width: 820px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .toc { display: none; } .cards { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header id="site-header"></header>
+<section class="page-head">
+  <div class="container">
+    <span class="eyebrow">Data policy</span>
+    <h1>Breeders decide who sees their data</h1>
+    <p class="lede">Every submission records the breeder's data-sharing choices. Raw genotype data are never released without the breeder's permission. Genotype visualizations, phenotype visualizations and exact GPS positions are seen by the project team only, unless the breeder also releases them to research collaborators and NNGA members.</p>
+    <div class="meta"><span>Managed by <b>Rodale Institute</b></span><span>Last updated <b>November 2026</b></span></div>
+  </div>
+</section>
+
+<main class="container">
+  <div class="layout">
+    <nav class="toc" aria-label="On this page">
+      <b>On this page</b>
+      <a href="#choices">Your choices</a>
+      <a href="#raw">Raw genotype data</a>
+      <a href="#access">Who counts as each group</a>
+      <a href="#vis">How data are protected</a>
+      <a href="#public">What anyone can see</a>
+      <a href="#never">What is never published</a>
+      <a href="#change">Changing your choices</a>
+    </nav>
+    <div>
+      <div class="cards">
+        <div class="pc"><span class="k">Raw genotype data</span><h3>On request only</h3><p>Released to others only with the breeder's written permission, before any publication.</p></div>
+        <div class="pc"><span class="k">Visualizations</span><h3>Breeder's choice</h3><p>Project team only by default, or also research collaborators and NNGA members.</p></div>
+        <div class="pc"><span class="k">Exact GPS positions</span><h3>Breeder's choice</h3><p>Everyone else sees only the general site location.</p></div>
+      </div>
+
+      <article>
+        <h2 id="choices">Your choices at submission</h2>
+        <p>When you submit trees you choose who may see each kind of data. The choice applies to every tree in that submission and is recorded with each tree in the project database. <b>Project team only</b> is the default for everything.</p>
+        <table class="vis">
+          <thead><tr><th>Data</th><th>Who can see it</th><th>What it covers</th></tr></thead>
+          <tbody>
+            <tr><td>Raw genotype data (SNP calls)</td><td><span class="tag req">On request</span></td><td>Held by the project. Shared with another party only on request and with your written permission, before publication.</td></tr>
+            <tr><td>Genotype visualizations</td><td><span class="tag int">Project team only</span> <span class="tag pub">Research collaborators &amp; NNGA members</span></td><td>Ancestry, population-structure and relatedness plots that include your trees.</td></tr>
+            <tr><td>Phenotype visualizations</td><td><span class="tag int">Project team only</span> <span class="tag pub">Research collaborators &amp; NNGA members</span></td><td>Charts of the trait data you provide for your trees.</td></tr>
+            <tr><td>Exact GPS positions</td><td><span class="tag int">Project team only</span> <span class="tag pub">Research collaborators &amp; NNGA members</span></td><td>The surveyed location of each tree on the field map. Everyone else sees one pin at the general site location.</td></tr>
+          </tbody>
+        </table>
+
+        <h2 id="access">Who counts as each group</h2>
+        <ul>
+          <li><b>Project team:</b> Rodale Institute and Savanna Institute staff working on this project.</li>
+          <li><b>Research collaborators &amp; NNGA members:</b> collaborating breeders and researchers, and current Northern Nut Growers Association members. They sign in on this website with an access code issued by the project team, and may also see the results in member reports, meetings and talks.</li>
+          <li><b>General public:</b> anyone else visiting this website. They see submission records and general site locations only, never exact positions, genotype or phenotype results.</li>
+        </ul>
+
+<h2 id="raw">Raw genotype data</h2>
+        <ul>
+          <li>Raw DArTag genotype data for your trees are stored by Rodale Institute and used by the project team for the analyses described in the project.</li>
+          <li>Anyone else who wants the raw data for your trees must request it. The project team will ask you, and data are released only with your written permission.</li>
+          <li>Raw data are not posted on this website or in a public repository before publication without your permission.</li>
+        </ul>
+
+        <h2 id="vis">How restricted data are protected</h2>
+        <ul>
+          <li>Restricted data are filtered on the project's server before anything is sent to a browser, based on the access code entered and on each tree's settings.</li>
+          <li>Trees set to <i>Project team only</i> are removed from plots and maps shown to collaborators and NNGA members.</li>
+          <li>Access codes are shared privately and can be changed by the project team at any time.</li>
+        </ul>
+
+        <h2 id="public">What anyone can see on this site</h2>
+        <p>To help balance sampling across programs, the website shows submission records to everyone: tree and submission IDs, program, maternal parent, species, material type, field name and position label, the general location of each site, and whether genotyping or phenotyping is in progress. No exact GPS positions, genotype results or phenotype results are shown to the general public.</p>
+
+        <h2 id="never">What is never published</h2>
+        <ul>
+          <li>Submitter names and email addresses.</li>
+          <li>Raw genotype data, unless you give permission.</li>
+          <li>Visualizations and exact GPS positions to anyone outside the group you chose.</li>
+        </ul>
+
+        <h2 id="change">Changing your choices</h2>
+        <p>You can change your choices at any time. <span id="contactLine">Contact the project team</span> with your program name and submission ID or batch ID, and the change will be applied to the affected trees.</p>
+        <p class="note">This page summarizes the project's data-sharing practice for breeders. It is not a legal agreement; formal data-use terms can be arranged with the project team on request.</p>
+      </article>
+    </div>
+  </div>
+</main>
+<footer id="site-footer"></footer>
+<script src="assets/chrome.js"></script>
+<script>
+  var cfg = window.CHESTNUT_CONFIG || {};
+  if (cfg.CONTACT_EMAIL) document.getElementById('contactLine').innerHTML = '<a href="mailto:' + cfg.CONTACT_EMAIL + '">Email the project team</a>';
+</script>
+</body>
+</html>

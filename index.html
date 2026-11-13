@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chestnut Genotyping Project</title>
+<meta name="description" content="Population-scale DArTag genotyping of Chinese chestnut germplasm in the United States: submission balance, genotyping progress, field map and results.">
+<meta name="theme-color" content="#133326">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Chestnut Genotyping Project">
+<meta property="og:description" content="Population-scale DArTag genotyping of Chinese chestnut germplasm in the United States: submission balance, genotyping progress, field map and results.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<script src="assets/viz.js"></script>
+<style>
+  /* ---------- hero ---------- */
+  .hero { background: var(--forest); color: #fff; position: relative; overflow: hidden; }
+  .hero::before { /* contour texture */
+    content: ""; position: absolute; inset: 0; opacity: .09; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600' viewBox='0 0 600 600' fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Cpath d='M-20 420c80-40 160-20 240 10s170 40 260 0 140-60 160-50'/%3E%3Cpath d='M-20 380c90-50 170-30 250 0s160 40 250 0 140-70 170-60'/%3E%3Cpath d='M-20 340c100-60 180-40 260-10s150 40 240 0 140-80 180-70'/%3E%3Cpath d='M-20 300c110-70 190-50 270-20s140 40 230 0 140-90 190-80'/%3E%3Cpath d='M-20 260c120-80 200-60 280-30s130 40 220 0 140-100 200-90'/%3E%3Cpath d='M-20 220c130-90 210-70 290-40s120 40 210 0 140-110 210-100'/%3E%3Cpath d='M-20 180c140-100 220-80 300-50s110 40 200 0 140-120 220-110'/%3E%3C/svg%3E");
+    background-size: 900px 900px; background-position: right -120px top -160px; background-repeat: no-repeat;
+  }
+  .hero .container { position: relative; padding-top: 72px; padding-bottom: 0; }
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 64px; align-items: end; padding-bottom: 56px; }
+  .hero .eyebrow { color: var(--forest-4); }
+  .hero h1 { color: #fff; font-size: clamp(34px, 4.4vw, 54px); line-height: 1.02; margin: 14px 0 20px; }
+  .hero .lede { font-size: 18.5px; line-height: 1.6; color: #d2e0d7; max-width: 640px; margin: 0 0 30px; }
+  .hero .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .hero-aside { border-left: 1px solid rgba(255,255,255,.16); padding-left: 32px; }
+  .hero-aside .k { font: 600 13px/1.3 var(--sans); color: var(--forest-4); }
+  .hero-aside .big { font: 800 64px/1 var(--display); letter-spacing: -.04em; color: #fff; margin: 10px 0 6px; font-variant-numeric: tabular-nums; }
+  .hero-aside .big small { font-size: 22px; font-weight: 600; color: #a9c2b4; letter-spacing: -.01em; margin-left: 6px; }
+  .hero-aside p { margin: 0; color: #c4d5cb; font-size: 14.5px; }
+  .figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid rgba(255,255,255,.16); }
+  .fig { padding: 24px 24px 28px 0; }
+  .fig + .fig { padding-left: 24px; border-left: 1px solid rgba(255,255,255,.16); }
+  .fig b { display: block; font: 800 34px/1 var(--display); letter-spacing: -.03em; color: #fff; font-variant-numeric: tabular-nums; }
+  .fig span { display: block; margin-top: 8px; font-size: 14px; color: #b9cbc0; line-height: 1.4; }
+  .fig .fig-note { display: block; margin-top: 6px; font-size: 12.5px; color: #8fae9c; line-height: 1.35; }
+
+  /* ---------- progress strip ---------- */
+  .progress-strip { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .progress-strip .container { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 40px; align-items: center; padding-top: 30px; padding-bottom: 30px; }
+  .ps-head .k { font: 600 13px/1.3 var(--sans); color: var(--forest-3); }
+  .ps-head h2 { font-size: 22px; margin: 4px 0 4px; }
+  .ps-head p { margin: 0; color: var(--muted); font-size: 14px; }
+  .plates { display: grid; grid-template-columns: repeat(21, minmax(0, 1fr)); gap: 5px; }
+  .plate { aspect-ratio: 1.5 / 1; border-radius: 3px; background: var(--sunken); border: 1px solid var(--line); position: relative; }
+  .plate.used { background: var(--forest-3); border-color: var(--forest-3); }
+  .plate.next { border: 1.5px dashed var(--husk); background: var(--husk-tint); }
+  .plate-meta { display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .plate-meta b { color: var(--ink); font-family: var(--mono); font-weight: 600; }
+
+  /* ---------- balance ---------- */
+  .bal-controls { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: end; margin-bottom: 22px; }
+  .bal-controls .ctl label { font: 600 12.5px/1.2 var(--sans); color: var(--muted); }
+  .bal-controls select { min-width: 240px; }
+  .bal-grid { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+  .bal-chart { padding: 24px 28px 22px; border-right: 1px solid var(--line); min-width: 0; }
+  .bal-chart-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 16px; }
+  .bal-chart-head h3 { margin: 0; font-size: 17px; }
+  .bal-chart-head span { font-size: 13px; color: var(--muted); }
+  .bars { position: relative; }
+  .bar-row { display: grid; grid-template-columns: 190px minmax(0, 1fr) 92px; gap: 14px; align-items: center; padding: 6px 0; }
+  .bar-row .lab { font-size: 14px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .lab.none { color: var(--faint); font-weight: 500; font-style: italic; }
+  .track { position: relative; height: 22px; }
+  .track .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--forest-2); transition: width .6s cubic-bezier(.2,.7,.2,1); width: 0; }
+  .track .fill.under { background: var(--forest-4); }
+  .track .fill.over { background: var(--forest); }
+  .track .fill.none { background: repeating-linear-gradient(135deg, var(--line-strong) 0 4px, var(--sunken) 4px 8px); }
+  .bar-row .val { font: 600 13.5px/1 var(--mono); text-align: right; color: var(--ink); white-space: nowrap; }
+  .bar-row .val small { font: 500 12px var(--mono); color: var(--muted); margin-left: 6px; }
+  .even-line { position: absolute; top: -6px; bottom: -6px; width: 0; border-left: 1.5px dashed var(--husk); pointer-events: none; z-index: 1; }
+  .even-tag { position: absolute; top: -26px; transform: translateX(-50%); font: 600 11.5px/1 var(--sans); color: var(--husk-2); background: var(--husk-tint); padding: 4px 7px; border-radius: 2px; white-space: nowrap; }
+  .bal-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+  .bal-legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .bal-legend i { display: block; width: 14px; height: 10px; border-radius: 2px; }
+  .bal-legend i.dash { width: 0; height: 14px; border-left: 1.5px dashed var(--husk); border-radius: 0; }
+  .bal-side { padding: 24px 26px; display: flex; flex-direction: column; gap: 0; }
+  .stat-line { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .stat-line:first-child { padding-top: 0; }
+  .stat-line:last-child { border-bottom: 0; }
+  .stat-line .k { font: 600 12.5px/1.3 var(--sans); color: var(--muted); }
+  .stat-line b { display: block; font: 800 30px/1.05 var(--display); letter-spacing: -.03em; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .stat-line b small { font: 600 14px var(--sans); color: var(--muted); letter-spacing: 0; margin-left: 4px; }
+  .stat-line p { margin: 4px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .bal-empty { padding: 30px 0; color: var(--muted); }
+  .src { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- composition ---------- */
+  .comp-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; }
+  .comp-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px 24px; min-width: 0; }
+  .comp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+  .comp-head h3 { margin: 0; font-size: 16px; }
+  .comp-head span { font-size: 12.5px; color: var(--muted); }
+  .stack-row { margin-bottom: 14px; }
+  .stack-row .t { display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px; }
+  .stack-row .t b { font-weight: 700; }
+  .stack-row .t span { font: 600 12.5px var(--mono); color: var(--muted); }
+  .stack-bar { display: flex; height: 26px; border-radius: 3px; overflow: hidden; background: var(--sunken); }
+  .stack-bar i { display: block; height: 100%; border-right: 2px solid #fff; transition: opacity .15s; }
+  .stack-bar i:last-child { border-right: 0; }
+  .stack-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-2); }
+  .stack-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .heat-wrap { overflow-x: auto; }
+  table.heat { border-collapse: separate; border-spacing: 3px; font-size: 12px; min-width: 100%; }
+  .heat th { font: 600 11.5px/1 var(--mono); color: var(--muted); padding: 2px 0 6px; text-align: center; }
+  .heat th.rl { text-align: right; padding-right: 8px; font: 600 12.5px/1.2 var(--sans); color: var(--ink); white-space: nowrap; }
+  .heat td { width: 34px; height: 26px; text-align: center; font: 600 11.5px/1 var(--mono); border-radius: 3px; cursor: default; }
+  .heat td.z { background: var(--sunken); color: transparent; }
+  .heat td.tot { background: none; color: var(--muted); font-weight: 600; }
+  .heat .scale { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .heat-scale { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .heat-scale i { display: block; width: 120px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #e3eee7, #133326); }
+  .comp-empty { color: var(--muted); font-size: 14px; padding: 18px 0; }
+  .pheno-line { display: flex; align-items: center; gap: 7px; margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  .pdot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--line-strong); }
+  .pdot.on { background: var(--forest-3); border-color: var(--forest-3); }
+
+  /* ---------- tools ---------- */
+  .tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+  .tool { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 26px 26px 24px; text-decoration: none; color: inherit; display: flex; flex-direction: column; transition: border-color .15s; }
+  .tool:hover { border-color: var(--forest-3); color: inherit; }
+  .tool svg.ic { width: 30px; height: 30px; color: var(--forest-3); margin-bottom: 18px; }
+  .tool h3 { font-size: 20px; margin: 0 0 8px; }
+  .tool p { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; flex: 1; }
+  .tool .go { font: 700 14px/1 var(--sans); color: var(--forest-2); display: inline-flex; align-items: center; gap: 8px; }
+  .tool .go svg { width: 14px; height: 14px; transition: transform .15s; }
+  .tool:hover .go svg { transform: translateX(3px); }
+
+  /* ---------- objectives + timeline ---------- */
+  .objectives { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin-bottom: 56px; }
+  .obj { border-top: 3px solid var(--forest); padding-top: 18px; }
+  .obj .k { font: 700 13px/1 var(--mono); color: var(--forest-3); }
+  .obj h3 { font-size: 19px; line-height: 1.3; margin: 10px 0 6px; }
+  .obj p { margin: 0; color: var(--ink-2); font-size: 15px; }
+  .timeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 30px; }
+  .q { position: relative; padding: 0 22px 0 0; }
+  .q::before { content: ""; position: absolute; left: 0; right: 0; top: 30px; height: 2px; background: var(--line); }
+  .q.past::before { background: var(--forest-3); }
+  .q .when { font: 700 13px/1 var(--mono); color: var(--ink); height: 22px; display: flex; align-items: center; gap: 8px; }
+  .q .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line-strong); margin: 3px 0 14px; position: relative; z-index: 1; }
+  .q.past .dot { background: var(--forest-3); border-color: var(--forest-3); }
+  .q.now .dot { background: var(--husk); border-color: var(--husk); box-shadow: 0 0 0 5px var(--husk-tint); }
+  .q.now .when::after { content: "Current"; font: 700 10.5px/1 var(--sans); padding: 4px 7px; border-radius: 2px; background: var(--husk); color: #fff; letter-spacing: .02em; }
+  .q p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+  .q.past p { color: var(--muted); }
+
+  /* ---------- team ---------- */
+  .team { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .person { display: flex; gap: 18px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px 24px; }
+  .avatar { width: 56px; height: 56px; flex: none; border-radius: 50%; background: var(--forest); color: #fff; display: grid; place-items: center; font: 700 18px/1 var(--display); letter-spacing: .02em; }
+  .person .role { font: 600 12.5px/1.3 var(--sans); color: var(--forest-3); }
+  .person h3 { font-size: 19px; margin: 3px 0 2px; }
+  .person p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+
+  @media (max-width: 960px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 36px; }
+    .hero-aside { border-left: 0; padding-left: 0; border-top: 1px solid rgba(255,255,255,.16); padding-top: 24px; }
+    .figs { grid-template-columns: 1fr; }
+    .fig + .fig { padding-left: 0; border-left: 0; border-top: 1px solid rgba(255,255,255,.16); }
+    .progress-strip .container { grid-template-columns: 1fr; gap: 18px; }
+    .bal-grid { grid-template-columns: 1fr; }
+    .comp-grid { grid-template-columns: 1fr; }
+    .bal-chart { border-right: 0; border-bottom: 1px solid var(--line); }
+    .tools { grid-template-columns: 1fr 1fr; }
+    .objectives, .team { grid-template-columns: 1fr; }
+    .timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 600px) {
+    .hero .container { padding-top: 48px; }
+    .bal-chart { padding: 20px 16px; } .bal-side { padding: 20px 16px; }
+    .bar-row { grid-template-columns: minmax(0, 1fr) 82px; row-gap: 4px; }
+    .bar-row .track { grid-column: 1 / -1; grid-row: 2; }
+    .plates { gap: 3px; }
+    .bal-controls select { min-width: 0; width: 100%; } .bal-controls .ctl { width: 100%; }
+    .tools { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header id="site-header"></header>
+
+<main>
+  <section class="hero on-dark">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <span class="eyebrow">NNGA Research Grant · Sept 2026 – Sept 2028</span>
+          <h1>Population-scale genotyping of Chinese chestnut in the United States</h1>
+          <p class="lede">A shared genomic reference for chestnut breeders: genome-wide DArTag markers on major US breeding collections, commercial orchards, named cultivars and related <i>Castanea</i> species, to guide parent selection and germplasm management.</p>
+          <div class="actions">
+            <a class="btn big light" href="submit.html">Submit trees</a>
+            <a class="btn big outline-light" href="#balance">See submission balance</a>
+          </div>
+        </div>
+        <div class="hero-aside">
+          <div class="k">Trees submitted to date</div>
+          <div class="big" id="heroCount">—<small>/ 2,000</small></div>
+          <p id="heroSub">Connecting to the submission database…</p>
+        </div>
+      </div>
+      <div class="figs">
+        <div class="fig"><b>2,000</b><span>genotypes targeted from new accessions</span></div>
+        <div class="fig"><b>~6,500</b><span>target sites on the DArTag Chestnut V2 panel</span><small class="fig-note">~3,283 high-MAF sites in <i>C. mollissima</i></small></div>
+        <div class="fig"><b>21</b><span>genotyping plates of 94 samples</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="progress-strip" aria-label="Genotyping progress">
+    <div class="container">
+      <div class="ps-head">
+        <div class="k">Genotyping progress</div>
+        <h2 id="psTitle">— of 21 plates</h2>
+        <p id="psSub">Each block is one 94-sample DArTag plate.</p>
+      </div>
+      <div>
+        <div class="plates" id="plates"></div>
+        <div class="plate-meta"><span><b id="psTrees">—</b> trees on plates</span><span><b id="psLeft">—</b> genotypes to reach 2,000</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="balance">
+    <div class="container">
+      <div class="section-head">
+        <div><span class="eyebrow">Submission balance</span><h2>Who is represented so far</h2></div>
+        <p>Live composition of every submitted tree. The dashed line marks an even share across groups, so over- and under-represented families and locations stand out before the remaining plates are filled.</p>
+      </div>
+      <div class="bal-controls">
+        <div class="ctl"><label for="balProgram">Breeding program</label><select id="balProgram"></select></div>
+        <div class="ctl"><label>Group by</label>
+          <div class="segmented" id="balGroup" role="group" aria-label="Group by">
+            <button data-g="mother" aria-pressed="true">Maternal parent</button>
+            <button data-g="location" aria-pressed="false">Location</button>
+            <button data-g="species" aria-pressed="false">Species</button>
+            <button data-g="material" aria-pressed="false">Material</button>
+          </div>
+        </div>
+      </div>
+      <div class="bal-grid">
+        <div class="bal-chart">
+          <div class="bal-chart-head"><h3 id="balTitle">Trees by maternal parent</h3><span id="balCount"></span></div>
+          <div class="bars" id="bars"><div class="bal-empty">Loading submissions…</div></div>
+          <div class="bal-legend"><span><i style="background:var(--forest)"></i>Above even share</span><span><i style="background:var(--forest-4)"></i>Below even share</span><span><i class="dash"></i>Even share</span><span><i style="background:repeating-linear-gradient(135deg,var(--line-strong) 0 3px,var(--sunken) 3px 6px)"></i>Not recorded</span></div>
+        </div>
+        <div class="bal-side" id="balSide"></div>
+      </div>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-head"><h3>Species composition by location</h3><span>Share of trees at each site</span></div>
+          <div id="stack"></div>
+          <div class="stack-legend" id="stackLegend"></div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-head"><h3>Data availability by location</h3><span>Genotype and phenotype status</span></div>
+          <div id="avail"></div>
+          <div class="stack-legend" id="availLegend"></div>
+        </div>
+      </div>
+      <p class="src" id="balSrc"></p>
+    </div>
+  </section>
+
+  <section class="section white">
+    <div class="container">
+      <div class="section-head">
+        <div><span class="eyebrow">Project tools</span><h2>One record per tree, from nomination to genotype</h2></div>
+        <p>Every tree receives a project ID that links its breeder information, tissue sample, RTK GPS survey point, drone imagery and DArTag genotype.</p>
+      </div>
+      <div class="tools">
+        <a class="tool" href="submit.html">
+          <svg class="ic" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="3.5" width="20" height="23" rx="2"/><path d="M10 10h10M10 14.5h10M10 19h6"/></svg>
+          <h3>Submit trees</h3>
+          <p>Paste rows from a spreadsheet, upload a file, or enter trees one at a time. Columns are matched automatically and problems are flagged before anything is saved.</p>
+          <span class="go">Start a submission <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+        </a>
+        <a class="tool" href="database.html">
+          <svg class="ic" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="15" cy="7" rx="10" ry="3.5"/><path d="M5 7v16c0 1.9 4.5 3.5 10 3.5s10-1.6 10-3.5V7M5 15c0 1.9 4.5 3.5 10 3.5s10-1.6 10-3.5"/></svg>
+          <h3>Tree database</h3>
+          <p>Search and filter every accession, download the table, view each 96-well DArTag plate, and review automated data-quality checks.</p>
+          <span class="go">Browse the database <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+        </a>
+        <a class="tool" href="map.html">
+          <svg class="ic" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.5 7l7-2.5 9 2.5 7-2.5v19l-7 2.5-9-2.5-7 2.5z"/><path d="M10.5 4.5v19M19.5 7v19"/></svg>
+          <h3>Field map</h3>
+          <p>Collection sites with drone orthomosaic overlays and a survey-grade GPS point for every sampled tree. Switch between sites and color trees by program, family or status.</p>
+          <span class="go">Open the map <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+        </a>
+        <a class="tool" href="analysis.html">
+          <svg class="ic" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 26h23M4 26V4"/><circle cx="10" cy="19" r="1.5"/><circle cx="13.5" cy="15" r="1.5"/><circle cx="11.5" cy="21.5" r="1.5"/><circle cx="20" cy="10" r="1.5"/><circle cx="22.5" cy="13" r="1.5"/><circle cx="19" cy="14" r="1.5"/></svg>
+          <h3>Results</h3>
+          <p>Population structure, genetic diversity, relatedness and reconstructed pedigrees, posted as each genotyping batch is analyzed.</p>
+          <span class="go">View results <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div><span class="eyebrow">Objectives and timeline</span><h2>What the project will deliver</h2></div>
+        <p>Commercial chestnut orchards trace back to a small number of breeding programs, and many selections are open-pollinated or lack pedigree records.</p>
+      </div>
+      <div class="objectives">
+        <div class="obj"><span class="k">01</span><h3>Large-scale DArTag genotype data</h3><p>For diverse chestnut accessions, high-value cultivars and representative <i>Castanea</i> species.</p></div>
+        <div class="obj"><span class="k">02</span><h3>Diversity, structure and relatedness</h3><p>Population genomic analysis of the germplasm behind US commercial production.</p></div>
+        <div class="obj"><span class="k">03</span><h3>Pedigrees and parentage</h3><p>Reconstructed for high-value cultivars with incomplete or uncertain records.</p></div>
+      </div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </section>
+
+  <section class="section white">
+    <div class="container">
+      <div class="section-head">
+        <div><span class="eyebrow">Project team</span><h2>People</h2></div>
+        <p>Working with collaborating breeders across US chestnut programs.</p>
+      </div>
+      <div class="team">
+        <div class="person"><div class="avatar">RT</div><div><span class="role">Project Director</span><h3>Dr. Richard Tegtmeier</h3><p>Orchard Scientist, Rodale Institute</p></div></div>
+        <div class="person"><div class="avatar">SB</div><div><span class="role">Collaborator</span><h3>Dr. Scott Brainard</h3><p>Chestnut and Hazelnut Breeder, Savanna Institute</p></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="site-footer"></footer>
+<script src="assets/chrome.js"></script>
+<script>
+(function () {
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var fmt = function (n) { return Number(n).toLocaleString(); };
+
+  /* ---------------- timeline ---------------- */
+  var TL = [
+    ['Q3 2026', 'Finalize sampling plan, start tissue collection, submit first DArTag batch.', [2026, 7, 9]],
+    ['Q4 2026', 'Continue sampling and genotyping; quality control; integrate pilot dataset.', [2026, 10, 12]],
+    ['Q1 2027', 'Diversity, structure and relatedness analyses; identify sampling gaps.', [2027, 1, 3]],
+    ['Q2 2027', 'Collect remaining priority germplasm; second genotyping batch; preliminary results.', [2027, 4, 6]],
+    ['Q3 2027', 'Complete genotyping, merge datasets, begin pedigree reconstruction.', [2027, 7, 9]],
+    ['Q4 2027', 'Complete kinship and pedigree analyses; breeder-ready summaries.', [2027, 10, 12]],
+    ['Q1 2028', 'Validate with collaborators; manuscripts, presentations and outreach.', [2028, 1, 3]],
+    ['Q2–Q3 2028', 'Publications, final report, public datasets and resources.', [2028, 4, 9]]
+  ];
+  var now = new Date(), cur = now.getFullYear() * 100 + now.getMonth() + 1;
+  document.getElementById('timeline').innerHTML = TL.map(function (t) {
+    var s = t[2][0] * 100 + t[2][1], e = t[2][0] * 100 + t[2][2];
+    return '<div class="q ' + (cur > e ? 'past' : cur >= s ? 'now' : '') + '"><div class="when">' + t[0] + '</div><div class="dot"></div><p>' + t[1] + '</p></div>';
+  }).join('');
+
+  /* ---------------- balance ---------------- */
+  var S = null, GROUP = 'mother', PROG = '';
+  var GROUP_LABEL = { mother: 'maternal parent', location: 'location', species: 'reported species', material: 'material type' };
+  var GROUP_NOUN = { mother: 'maternal families', location: 'locations', column: 'columns', species: 'species', material: 'material types' };
+
+  function idx(f) { return S.fields.indexOf(f); }
+  function filtered() { var pi = idx('program'); return S.records.filter(function (r) { return !PROG || r[pi] === PROG; }); }
+
+  function renderBalance() {
+    var recs = filtered(), gi = idx(GROUP), counts = {}, total = recs.length;
+    recs.forEach(function (r) { var k = (r[gi] && r[gi] !== 'Not given') ? r[gi] : 'Not recorded'; if (GROUP === 'column' && !r[gi]) k = 'No column (outside orchard grid)'; counts[k] = (counts[k] || 0) + 1; });
+    var keys = Object.keys(counts).sort(function (a, b) {
+      if (GROUP === 'column') { var na = +String(a).replace(/\D/g, '') || 999, nb = +String(b).replace(/\D/g, '') || 999; return na - nb; }
+      return counts[b] - counts[a] || a.localeCompare(b);
+    });
+    var isNone = function (k) { return /^Not recorded$|^No column|^Unknown$/.test(k); };
+    var real = keys.filter(function (k) { return !isNone(k); });
+    keys = real.concat(keys.filter(isNone));
+    var even = real.length ? real.reduce(function (a, k) { return a + counts[k]; }, 0) / real.length : 0;
+    var max = Math.max.apply(null, keys.map(function (k) { return counts[k]; }).concat([1]));
+    document.getElementById('balTitle').textContent = 'Trees by ' + GROUP_LABEL[GROUP];
+    document.getElementById('balCount').textContent = fmt(total) + ' trees · ' + keys.length + ' groups';
+
+    if (!total) { document.getElementById('bars').innerHTML = '<div class="bal-empty">No submissions yet for this program.</div>'; document.getElementById('balSide').innerHTML = ''; return; }
+    var evenPct = even / max * 100;
+    document.getElementById('bars').innerHTML =
+      (real.length > 1 ? '<div class="even-wrap" style="position:absolute;left:204px;right:106px;top:0;bottom:0"><div class="even-line" style="left:' + evenPct + '%"><span class="even-tag">Even share ' + even.toFixed(1) + '</span></div></div>' : '') +
+      keys.map(function (k) {
+        var c = counts[k], isReal = real.indexOf(k) >= 0;
+        var cls = !isReal ? 'none' : (c > even * 1.15 ? 'over' : c < even * 0.85 ? 'under' : '');
+        return '<div class="bar-row"><span class="lab' + (isReal ? '' : ' none') + '" title="' + esc(k) + '">' + esc(k) + '</span><span class="track"><span class="fill ' + cls + '" data-w="' + (c / max * 100) + '"></span></span><span class="val">' + c + '<small>' + (c / total * 100).toFixed(1) + '%</small></span></div>';
+      }).join('');
+    requestAnimationFrame(function () { document.querySelectorAll('#bars .fill').forEach(function (f) { f.style.width = f.dataset.w + '%'; }); });
+    // keep even line aligned with tracks on small screens
+    var wrap = document.querySelector('.even-wrap');
+    if (wrap && window.matchMedia('(max-width: 600px)').matches) { wrap.style.left = '0'; wrap.style.right = '0'; }
+
+    // Diversity of representation (Shannon-based effective number + evenness)
+    var H = 0, rt = real.reduce(function (a, k) { return a + counts[k]; }, 0);
+    real.forEach(function (k) { var p = counts[k] / rt; H -= p * Math.log(p); });
+    var eff = Math.exp(H), J = real.length > 1 ? H / Math.log(real.length) : 1;
+    var top = real.slice().sort(function (a, b) { return counts[b] - counts[a]; })[0];
+    var plated = recs.filter(function (r) { return r[idx('plated')] === 1; }).length;
+    document.getElementById('balSide').innerHTML =
+      '<div class="stat-line"><div class="k">Trees in view</div><b>' + fmt(total) + '</b><p>' + fmt(plated) + ' already on DArTag plates</p></div>' +
+      '<div class="stat-line"><div class="k">Distinct ' + GROUP_NOUN[GROUP] + '</div><b>' + real.length + '</b>' + (keys.length > real.length ? '<p>plus ' + (total - rt) + ' trees with no value recorded</p>' : '') + '</div>' +
+      (top ? '<div class="stat-line"><div class="k">Largest group</div><b>' + (counts[top] / rt * 100).toFixed(0) + '<small>%</small></b><p>' + esc(top) + ' · ' + counts[top] + ' trees</p></div>' : '') +
+      (real.length > 1 ? '<div class="stat-line"><div class="k">Effective number of ' + GROUP_NOUN[GROUP] + '</div><b>' + eff.toFixed(1) + '<small>of ' + real.length + '</small></b><p>Evenness ' + J.toFixed(2) + ' (1.00 = perfectly balanced). Equal-sized groups giving the same diversity as the current mix.</p></div>' : '');
+  }
+
+  function renderComposition() {
+    var recs = filtered(), li = idx('location'), si = idx('species'), mi = idx('mother'), ci = idx('column');
+    var tip = Viz.tip();
+    // species by location
+    var byLoc = {}, spAll = {};
+    recs.forEach(function (r) { var l = r[li] || 'Not recorded', sp = (r[si] && r[si] !== 'Not given') ? r[si] : 'Not recorded'; (byLoc[l] = byLoc[l] || {})[sp] = (byLoc[l][sp] || 0) + 1; spAll[sp] = (spAll[sp] || 0) + 1; });
+    Viz.scale('species', spAll);
+    var locs = Object.keys(byLoc).sort(function (a, b) { var ta = 0, tb = 0, k; for (k in byLoc[a]) ta += byLoc[a][k]; for (k in byLoc[b]) tb += byLoc[b][k]; return tb - ta; });
+    var spKeys = Object.keys(spAll).sort(function (a, b) { return Viz.isNone(a) - Viz.isNone(b) || spAll[b] - spAll[a]; });
+    document.getElementById('stack').innerHTML = locs.length ? locs.map(function (l) {
+      var tot = 0; for (var k in byLoc[l]) tot += byLoc[l][k];
+      return '<div class="stack-row"><div class="t"><b>' + esc(l) + '</b><span>' + tot + ' trees</span></div><div class="stack-bar">' +
+        spKeys.filter(function (sp) { return byLoc[l][sp]; }).map(function (sp) { var n = byLoc[l][sp]; return '<i data-t="' + esc(l + '|' + sp + '|' + n + '|' + (n / tot * 100).toFixed(0)) + '" style="width:' + (n / tot * 100) + '%;background:' + Viz.color('species', sp) + '"></i>'; }).join('') + '</div></div>';
+    }).join('') : '<div class="comp-empty">No submissions yet.</div>';
+    document.getElementById('stackLegend').innerHTML = spKeys.map(function (sp) { return '<span><i class="swatch" style="background:' + Viz.color('species', sp) + '"></i>' + esc(sp) + '</span>'; }).join('');
+    document.getElementById('stack').onmousemove = function (e) { var t = e.target.dataset && e.target.dataset.t; if (!t) { tip.hide(); return; } var p = t.split('|'); tip.show('<b>' + esc(p[1]) + '</b><br>' + esc(p[0]) + '<br><span class="m">' + p[2] + ' trees · ' + p[3] + '%</span>', e); };
+    document.getElementById('stack').onmouseleave = tip.hide;
+
+    // data availability by location
+    var GI = idx('geno'), PI = idx('pheno');
+    var GORDER = ['Genotype data available', 'Genotyping in progress', 'Selected, not yet plated', 'Not genotyped'];
+    var GCOL = { 'Genotype data available': '#1f6f5c', 'Genotyping in progress': '#d4a43a', 'Selected, not yet plated': '#3b6fb6', 'Not genotyped': '#c9cfca' };
+    var av = {}, ph = {}, used = {};
+    recs.forEach(function (r) { var l = r[li] || 'Not recorded', g = r[GI] || 'Not genotyped'; (av[l] = av[l] || {})[g] = (av[l][g] || 0) + 1; used[g] = 1; if (/available/.test(r[PI] || '')) ph[l] = (ph[l] || 0) + 1; });
+    document.getElementById('avail').innerHTML = locs.length ? locs.map(function (l) {
+      var tot = 0; for (var k in av[l]) tot += av[l][k];
+      var pc = ph[l] || 0;
+      return '<div class="stack-row"><div class="t"><b>' + esc(l) + '</b><span>' + tot + ' trees</span></div><div class="stack-bar">' +
+        GORDER.filter(function (g) { return av[l][g]; }).map(function (g) { var n = av[l][g]; return '<i data-t="' + esc(l + '|' + g + '|' + n + '|' + (n / tot * 100).toFixed(0)) + '" style="width:' + (n / tot * 100) + '%;background:' + GCOL[g] + '"></i>'; }).join('') +
+        '</div><div class="pheno-line"><span class="pdot' + (pc ? ' on' : '') + '"></span>' + (pc ? pc + ' of ' + tot + ' with phenotype data' : 'No phenotype data recorded yet') + '</div></div>';
+    }).join('') : '<div class="comp-empty">No submissions yet.</div>';
+    document.getElementById('availLegend').innerHTML = GORDER.filter(function (g) { return used[g]; }).map(function (g) { return '<span><i class="swatch" style="background:' + GCOL[g] + '"></i>' + esc(g) + '</span>'; }).join('');
+    document.getElementById('avail').onmousemove = function (e) { var t = e.target.dataset && e.target.dataset.t; if (!t) { tip.hide(); return; } var p = t.split('|'); tip.show('<b>' + esc(p[1]) + '</b><br>' + esc(p[0]) + '<br><span class="m">' + p[2] + ' trees · ' + p[3] + '%</span>', e); };
+    document.getElementById('avail').onmouseleave = tip.hide;
+  }
+
+  function setupBalance() {
+    var pi = idx('program'), present = {};
+    S.records.forEach(function (r) { present[r[pi]] = (present[r[pi]] || 0) + 1; });
+    var progs = S.programs.filter(function (p) { return present[p]; });
+    var sel = document.getElementById('balProgram');
+    sel.innerHTML = '<option value="">All programs (' + fmt(S.records.length) + ' trees)</option>' + progs.map(function (p) { return '<option value="' + esc(p) + '">' + esc(p) + ' (' + fmt(present[p]) + ')</option>'; }).join('');
+    if (progs.length === 1) { sel.value = progs[0]; PROG = progs[0]; }
+    sel.onchange = function () { PROG = sel.value; renderBalance(); renderComposition(); };
+    document.getElementById('balGroup').onclick = function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      GROUP = b.dataset.g;
+      this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+      renderBalance();
+    };
+    var dates = S.records.map(function (r) { return r[idx('date')]; }).filter(Boolean).sort();
+    document.getElementById('balSrc').textContent = (window.CHESTNUT_DEMO ? 'Preview from Rodale Institute plates 001–002. ' : 'Live from the project database. ') +
+      (dates.length ? 'Most recent submission ' + dates[dates.length - 1] + '.' : '');
+    renderBalance(); renderComposition();
+  }
+
+  function renderProgress() {
+    var plated = S.records.filter(function (r) { return r[idx('plated')] === 1; }).length;
+    var used = S.platesUsed, planned = S.platesPlanned || 21;
+    document.getElementById('plates').innerHTML = Array.from({ length: planned }, function (_, i) {
+      return '<span class="plate' + (i < used ? ' used' : i === used ? ' next' : '') + '" title="Plate ' + String(i + 1).padStart(3, '0') + (i < used ? ' · submitted' : i === used ? ' · next' : '') + '"></span>';
+    }).join('');
+    document.getElementById('psTitle').textContent = used + ' of ' + planned + ' plates submitted';
+    document.getElementById('psTrees').textContent = fmt(plated);
+    document.getElementById('psLeft').textContent = fmt(Math.max(0, S.target - plated));
+    var total = S.records.length;
+    document.getElementById('heroCount').innerHTML = fmt(total) + '<small>/ ' + fmt(S.target) + '</small>';
+    var nProg = Object.keys(S.records.reduce(function (a, r) { a[r[idx('program')]] = 1; return a; }, {})).length;
+    document.getElementById('heroSub').textContent = Math.round(total / S.target * 100) + '% of the genotyping target · ' + nProg + ' program' + (nProg === 1 ? '' : 's') + ' contributing';
+  }
+
+  call('getSummary').then(function (s) { S = s; renderProgress(); setupBalance(); })
+    .catch(function () {
+      document.getElementById('bars').innerHTML = '<div class="bal-empty">Submission data is unavailable right now.</div>';
+      document.getElementById('heroSub').textContent = 'Submission count unavailable right now.';
+    });
+})();
+</script>
+</body>
+</html>

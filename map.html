@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field map · Chestnut Genotyping Project</title>
+<meta name="description" content="Field map of chestnut collection sites with surveyed GPS points for every sampled tree, colored by maternal cultivar.">
+<meta name="theme-color" content="#133326">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Field map · Chestnut Genotyping Project">
+<meta property="og:description" content="Field map of chestnut collection sites with surveyed GPS points for every sampled tree, colored by maternal cultivar.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<script src="assets/viz.js"></script>
+<style>
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; overflow: hidden; font-size: 14px; }
+  #app { flex: 1; display: flex; min-height: 0; position: relative; }
+  aside { width: 360px; flex: none; background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; z-index: 500; min-height: 0; }
+  .side-head { padding: 18px 20px 16px; border-bottom: 1px solid var(--line); }
+  .side-head h1 { font-size: 24px; margin: 4px 0 4px; letter-spacing: -.02em; }
+  .side-head p { margin: 0; color: var(--muted); font-size: 13px; }
+  .scroll { overflow: auto; flex: 1; }
+  .sec { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  .sec h2 { font: 700 13.5px/1 var(--sans); color: var(--ink); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .sec h2 .sp { flex: 1; }
+  .sec h2 .check { font: 400 12.5px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink-2); gap: 6px; }
+  .siteNav { display: grid; grid-template-columns: 36px 1fr 36px; gap: 6px; margin-bottom: 10px; }
+  .ib { border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r-sm); color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+  .ib:hover { border-color: var(--forest-3); color: var(--forest); }
+  .ib svg { width: 14px; height: 14px; }
+  select, input[type=text] { font-size: 14px; padding: 8px 10px; }
+  select { padding-right: 30px; }
+  .sites { list-style: none; margin: 0; padding: 0; max-height: 236px; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .sites li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--line); }
+  .sites li:last-child { border-bottom: 0; }
+  .sites li:hover { background: #f8f9f6; }
+  .sites li.on { background: var(--sage); box-shadow: inset 2px 0 var(--forest-2); }
+  .sites li > span:first-child { font-weight: 500; line-height: 1.3; }
+  .sites .hint { font-weight: 400; }
+  .sites .ct { margin-left: auto; font: 600 12px/1.3 var(--sans); color: var(--muted); text-align: right; white-space: nowrap; }
+  .hint { font-size: 12.5px; color: var(--muted); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; }
+  .stat { padding: 11px 12px; background: var(--surface); }
+  .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .stat b { display: block; font: 800 22px/1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat span { display: block; font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .layer { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 8px; }
+  .layer label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; margin: 0; font-size: 13.5px; color: var(--ink); }
+  .layer label input { margin-top: 2px; }
+  .layer .meta { font: 400 12px/1.4 var(--sans); color: var(--muted); }
+  .layer input[type=range] { width: 100%; margin-top: 8px; accent-color: var(--forest-2); }
+  .layer.err { border-color: #eec5bf; background: var(--err-tint); }
+  .radios { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .radios label, .legend label { display: inline-flex; gap: 7px; align-items: center; cursor: pointer; margin: 0; font-size: 13px; color: var(--ink-2); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line-strong); border-radius: var(--r-sm); overflow: hidden; }
+  .seg label { margin: 0; text-align: center; padding: 7px 0; font-size: 13px; cursor: pointer; border-right: 1px solid var(--line-strong); color: var(--ink-2); }
+  .seg label:last-child { border-right: 0; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label:has(input:checked) { background: var(--forest); color: #fff; }
+  .legend { display: grid; gap: 2px; margin-top: 10px; max-height: 210px; overflow: auto; }
+  .legend label { display: flex; padding: 3px 0; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px rgba(0,0,0,.25); }
+  .legend .n { margin-left: auto; font: 500 11.5px var(--mono); color: var(--muted); }
+  .access-note { background: var(--sage); }
+  .access-note p { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); }
+  .access-note b { color: var(--forest); }
+  .access-note .btn { min-height: 34px; padding: 7px 12px; font-size: 13px; }
+  .pin.lock .pin-n { background: var(--ink-2); }
+  .prof-row { display: grid; grid-template-columns: minmax(0, 1fr) 90px 34px; gap: 8px; align-items: center; padding: 4px 0; font-size: 13px; }
+  .prof-row .l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 7px; }
+  .prof-row .b { height: 8px; background: var(--sunken); border-radius: 4px; overflow: hidden; }
+  .prof-row .b i { display: block; height: 100%; border-radius: 4px; }
+  .prof-row .n { font: 600 12px var(--mono); text-align: right; color: var(--ink-2); }
+  .prof-note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+  .links a { display: block; font-weight: 500; margin-top: 8px; }
+  .drop { border: 1.5px dashed var(--line-strong); border-radius: var(--r-sm); padding: 14px; text-align: center; cursor: pointer; color: var(--muted); font-size: 13px; background: #fbfcfa; }
+  .drop.over, .drop:hover { border-color: var(--forest-3); background: var(--sage); }
+  details summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--forest-2); margin-top: 4px; }
+  #map { flex: 1; height: 100%; background: #dfe4de; }
+  .msg { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 800; background: var(--ink); color: #fff; padding: 9px 16px; border-radius: var(--r-sm); font: 600 13px var(--sans); box-shadow: var(--shadow-pop); }
+  .msg[hidden] { display: none; }
+
+  /* Leaflet chrome */
+  .leaflet-container { font-family: var(--sans); }
+  .leaflet-bar { border: 1px solid var(--line-strong) !important; box-shadow: var(--shadow-pop) !important; border-radius: var(--r-sm) !important; }
+  .leaflet-bar a { color: var(--ink) !important; width: 32px !important; height: 32px !important; line-height: 32px !important; }
+  .leaflet-popup-content-wrapper { border-radius: var(--r); box-shadow: var(--shadow-pop); }
+  .leaflet-popup-content { font-size: 13px; margin: 14px 16px; min-width: 240px; }
+  .pop h3 { margin: 0 0 8px; font: 600 15px/1.2 var(--mono); }
+  .pop table { border-collapse: collapse; width: 100%; }
+  .pop td { padding: 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .pop td:first-child { color: var(--muted); white-space: nowrap; padding-right: 12px; font-size: 12px; }
+  .tlabel { background: rgba(255,255,255,.9); border: 0; box-shadow: none; padding: 1px 5px; font: 600 10.5px var(--mono); border-radius: 2px; }
+  .tlabel::before { display: none; }
+  .leaflet-control-scale-line { border-color: var(--ink-2); font: 500 10.5px var(--mono); background: rgba(255,255,255,.8); }
+
+  .site-label { background: var(--ink); color: #fff; font: 500 11.5px/1 var(--mono); padding: 6px 9px; border-radius: 2px; white-space: nowrap; box-shadow: var(--shadow-pop); cursor: pointer; transform: translate(10px, -50%); display: inline-block; }
+  .site-label b { font-weight: 600; color: #f1c79f; margin-left: 6px; }
+  .pin { position: absolute; left: 0; top: 0; transform: translate(-14px, -14px); display: flex; align-items: center; gap: 8px; pointer-events: auto; cursor: pointer; }
+  .pin.left { flex-direction: row-reverse; transform: translate(calc(-100% + 14px), -14px); }
+  .pin-n { width: 28px; height: 28px; border-radius: 50%; background: var(--husk); color: #fff; display: grid; place-items: center; font: 700 11.5px/1 var(--mono); box-shadow: 0 0 0 3px rgba(255,255,255,.9), var(--shadow-pop); }
+  .pin.prog .pin-n { border-radius: 4px; background: var(--forest); }
+  .pin.ok .pin-n { background: var(--forest-3); }
+  .pin.ok .pin-l em { color: var(--forest-3); font-weight: 600; }
+  .pin-l { background: #fff; color: var(--ink); font: 700 12.5px/1.2 var(--sans); padding: 6px 9px; border-radius: 3px; white-space: nowrap; box-shadow: var(--shadow-pop); }
+  .pin-l em { display: block; font: 500 11px/1.2 var(--sans); font-style: normal; color: var(--muted); margin-top: 2px; }
+  .hov { min-width: 220px; }
+  .hov-h { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+  .hov-h b { font: 700 13px var(--mono); }
+  .hov table { border-collapse: collapse; margin-top: 6px; }
+  .hov td { padding: 2px 0; vertical-align: top; font-size: 12px; }
+  .hov td:first-child { color: #9fb5a8; padding-right: 10px; white-space: nowrap; }
+  .gbadge { display: inline-block; font: 700 11px/1 var(--sans); padding: 4px 7px; border-radius: 3px; margin: 0 4px 2px 0; }
+  .gbadge.ok { background: #7bd389; color: #0f1a15; } .gbadge.prog { background: #ffd166; color: #0f1a15; } .gbadge.sel { background: #4fc3f7; color: #0f1a15; } .gbadge.none { background: #e7ebe8; color: #2f3b35; }
+  .legend-key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .legend-key span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend-key i { display: block; border-radius: 50%; background: #7a8a80; }
+  .legend-key .k1 { width: 12px; height: 12px; box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px rgba(0,0,0,.3); }
+  .legend-key .k2 { width: 9px; height: 9px; opacity: .5; }
+  #toggleSide { display: none; }
+  @media (max-width: 760px) {
+    aside { position: absolute; left: 0; top: 0; bottom: 0; width: min(92vw, 360px); transform: translateX(-100%); transition: transform .2s; box-shadow: var(--shadow-pop); }
+    aside.open { transform: none; }
+    #toggleSide { display: inline-flex; position: absolute; top: 12px; left: 56px; z-index: 900; gap: 8px; align-items: center; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 8px 12px; font: 600 13px var(--sans); color: var(--ink); box-shadow: var(--shadow-pop); }
+    .site-footer { display: none; }
+  }
+</style>
+</head>
+<body class="app">
+<header id="site-header"></header>
+<div id="app">
+  <aside id="side">
+    <div class="side-head">
+      <span class="eyebrow">Field map</span>
+      <h1>Collection sites</h1>
+      <p>Surveyed tree locations and drone imagery by site.</p>
+    </div>
+    <div class="scroll">
+      <div class="sec">
+        <h2>Site</h2>
+        <div class="siteNav">
+          <button class="ib" id="prevSite" title="Previous site ( [ )" aria-label="Previous site"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 2.5L4.5 7 9 11.5"/></svg></button>
+          <select id="siteSel" aria-label="Field site"></select>
+          <button class="ib" id="nextSite" title="Next site ( ] )" aria-label="Next site"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 2.5L9.5 7 5 11.5"/></svg></button>
+        </div>
+        <ul class="sites" id="siteList"></ul>
+      </div>
+
+      <div class="sec access-note" id="accessNote" hidden></div>
+
+      <div class="sec">
+        <h2>Summary</h2>
+        <div class="stats" id="stats"></div>
+      </div>
+
+      <div class="sec" id="profileSec">
+        <h2>Site profile <span class="sp"></span><select id="profileBy" style="width:auto;font-size:12.5px;padding:5px 26px 5px 8px"><option value="mother">Maternal parent</option><option value="geno">Genotype status</option><option value="species">Species</option></select></h2>
+        <div id="profile"></div>
+      </div>
+
+      <div class="sec">
+        <h2>Imagery layers <span class="sp"></span><label class="check"><input type="checkbox" id="allOverlays"> All sites</label></h2>
+        <div id="layers"></div>
+        <details>
+          <summary>Add an overlay from this computer</summary>
+          <div style="margin-top:10px">
+            <div class="drop" id="localDrop" tabindex="0">Drop a <b>GeoTIFF</b> orthomosaic, PNG or JPG, or click to choose<input type="file" id="localFile" accept=".tif,.tiff,.png,.jpg,.jpeg" hidden></div>
+            <div id="localBounds" hidden style="margin-top:10px">
+              <label for="boundsIn">Image corners: south, west, north, east</label>
+              <input type="text" id="boundsIn" placeholder="40.5101, -75.7920, 40.5140, -75.7861">
+              <button class="btn secondary" id="boundsGo" style="margin-top:8px;width:100%">Place image</button>
+            </div>
+            <p class="hint">Visible only to you until you reload. Large orthomosaics should be published as map tiles or a Cloud-Optimized GeoTIFF on the Field Sites tab.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="sec">
+        <h2>Trees</h2>
+        <label for="colorBy">Color by</label>
+        <select id="colorBy">
+          <option value="mother">Maternal cultivar</option>
+          <option value="geno">Genotype status</option>
+          <option value="pheno">Phenotype data</option>
+          <option value="program">Breeding program</option>
+          <option value="species">Reported species</option>
+          <option value="material">Material type</option>
+          <option value="status">Review status</option>
+          <option value="gps">GPS source</option>
+          <option value="popGroup">Population group</option>
+        </select>
+        <div class="legend" id="legend"></div>
+        <div style="margin-top:12px"><input type="text" id="search" placeholder="Find a tree by ID, parent or field" list="searchList"><datalist id="searchList"></datalist></div>
+        <div class="radios" style="margin-top:12px">
+          <label title="Shown when zoomed in close"><input type="checkbox" id="labels"> Tree ID labels (zoom in)</label>
+          <label><input type="checkbox" id="showUnlinked" checked> Unsampled survey trees</label>
+          <label><input type="checkbox" id="showReported" checked> Breeder-reported GPS</label>
+        </div>
+      </div>
+
+
+      <div class="sec" id="modelsSec" hidden>
+        <h2>3D models &amp; links</h2>
+        <div class="links" id="models"></div>
+      </div>
+
+      <div class="sec" style="border-bottom:0">
+        <p class="hint" style="margin:0">Sites and imagery come from the <b>Field Sites</b> tab of the project sheet; Trimble survey points from the <b>GPS Points</b> tab. Surveyed points replace breeder-reported coordinates automatically. Keys <span class="mono">[</span> and <span class="mono">]</span> step through sites.</p>
+      </div>
+    </div>
+  </aside>
+  <button id="toggleSide" aria-controls="side"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3.5h10M2 7h10M2 10.5h10"/></svg>Sites &amp; layers</button>
+  <div id="map"></div>
+</div>
+<div class="msg" id="msg" hidden></div>
+<script src="assets/chrome.js"></script>
+<script>
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function msg(t, ms) { var m = $('msg'); m.textContent = t; m.hidden = !t; clearTimeout(msg.t); if (t && ms) msg.t = setTimeout(function () { m.hidden = true; }, ms); }
+function pref(k, v) { try { if (v === undefined) return localStorage.getItem('cmap_' + k); localStorage.setItem('cmap_' + k, v); } catch (e) { return null; } }
+
+/* ------------------------------------------------ map setup */
+var map = L.map('map', { zoomControl: true, maxZoom: 23, preferCanvas: true }).setView([39.5, -86], 5);
+L.control.scale({ imperial: true, metric: true }).addTo(map);
+var BASEMAPS = {
+  'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 19, maxZoom: 23, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' }),
+};
+var currentBase = null;
+function setBase(name) { if (currentBase) map.removeLayer(currentBase); currentBase = BASEMAPS[name] || BASEMAPS.Satellite; currentBase.addTo(map); currentBase.bringToBack(); pref('base', name); }
+map.createPane('overlays'); map.getPane('overlays').style.zIndex = 350;
+var pointLayer = L.layerGroup().addTo(map), unlinkedLayer = L.layerGroup().addTo(map), siteLabelLayer = L.layerGroup().addTo(map), pinLayer = L.layerGroup().addTo(map);
+/** One summary pin per site (plus program-address pins for trees with no site). Sites with surveyed points
+    say "GPS points available" and hide their pin once zoomed in far enough to see the individual trees. */
+function sitePins(name) {
+  var out = [];
+  DATA.sites.forEach(function (s) {
+    if (name !== '__all' && name !== s.name) return;
+    var trees = allTrees(s.name), mapped = trees.filter(function (t) { return t.lat != null; });
+    var unl = DATA.unlinked.filter(function (u) { return u.site === s.name; });
+    if (!trees.length && !unl.length) return;
+    var pts = mapped.map(function (t) { return [t.lat, t.lon]; }).concat(unl.map(function (u) { return [u.lat, u.lon]; }));
+    var c = s.lat != null ? [s.lat, s.lon] : (pts.length ? [L.latLngBounds(pts).getCenter().lat, L.latLngBounds(pts).getCenter().lng] : null);
+    if (!c) return;
+    var groups = {}; trees.forEach(function (t) { var g = t.mother || t.field || 'Not recorded'; groups[g] = (groups[g] || 0) + 1; });
+    out.push({ kind: 'site', label: s.name, site: s.name, lat: c[0], lon: c[1], count: trees.length, mapped: mapped.length, unsampled: unl.length, available: pts.length > 0,
+               restricted: trees.filter(function (t) { return t.gpsRestricted; }).length, groups: groups });
+  });
+  (DATA.pins || []).forEach(function (p) { if (p.kind === 'program' && (name === '__all' || name === '__none')) out.push(Object.assign({ mapped: 0, unsampled: 0, available: false }, p)); });
+  return out;
+}
+function renderPins() {
+  pinLayer.clearLayers();
+  var z = map.getZoom();
+  var pins = sitePins(SITE).filter(function (p) { return !p.available || z < 17; });
+  var pts = pins.map(function (p) { return map.latLngToContainerPoint([p.lat, p.lon]); });
+  pins.forEach(function (pin, pi) {
+    var left = pts.some(function (q, j) { return j !== pi && Math.abs(q.y - pts[pi].y) < 44 && Math.abs(q.x - pts[pi].x) < 230 && pts[pi].x < q.x; });
+    var top = Object.keys(pin.groups).sort(function (a, b) { return pin.groups[b] - pin.groups[a]; });
+    var status = pin.available ? 'GPS points available' : pin.restricted ? 'Exact positions restricted' : 'GPS points pending';
+    var detail = !pin.available && pin.restricted
+      ? pin.restricted + ' trees have surveyed GPS points. At the breeders\' request, exact positions are shown only to the project team' + (pin.restricted ? ' and, where allowed, to research collaborators and NNGA members' : '') + '. <a href="#" data-access>Enter an access code</a> to see them.'
+      : pin.available
+      ? pin.mapped + ' of ' + pin.count + ' submitted trees have surveyed GPS points' + (pin.unsampled ? ', plus ' + pin.unsampled + ' unsampled survey trees' : '') + '. Zoom in or select the site to see each tree.'
+      : 'Individual GPS points will be added after the field survey; this pin marks ' + (pin.kind === 'program' ? 'the program\'s general address' + (pin.address ? ' (' + esc(pin.address) + ')' : '') : 'the site center') + '.';
+    var html = '<div class="pop"><h3 style="font-family:var(--sans)">' + esc(pin.label) + '</h3><p style="margin:0 0 8px"><b>' + pin.count + ' trees submitted.</b> ' + detail + '</p><table>' +
+      top.slice(0, 8).map(function (k) { return '<tr><td>' + esc(k) + '</td><td style="text-align:right;font-family:var(--mono)">' + pin.groups[k] + '</td></tr>'; }).join('') +
+      (top.length > 8 ? '<tr><td colspan="2" style="color:var(--muted)">+ ' + (top.length - 8) + ' more groups</td></tr>' : '') + '</table>' +
+      (pin.available && SITE !== pin.site ? '<p style="margin:8px 0 0"><a href="#" data-goto="' + esc(pin.site) + '">Show the trees at this site</a></p>' : '') + '</div>';
+    var mk = L.marker([pin.lat, pin.lon], { icon: L.divIcon({ className: '', iconSize: [0, 0], html: '<div class="pin' + (pin.kind === 'program' ? ' prog' : '') + (pin.available ? ' ok' : (pin.restricted ? ' lock' : '')) + (left ? ' left' : '') + '"><span class="pin-n">' + pin.count + '</span><span class="pin-l">' + esc(pin.kind === 'site' ? pin.label.replace(/^Rodale Institute –\s*/, '') : pin.label) + '<em>' + status + '</em></span></div>' }) })
+      .bindPopup(html, { maxWidth: 320 }).addTo(pinLayer);
+    mk.on('popupopen', function (e) { var a = e.popup.getElement().querySelector('[data-goto]'); if (a) a.onclick = function (ev) { ev.preventDefault(); map.closePopup(); selectSite(a.dataset.goto); }; });
+  });
+}
+
+function renderSiteLabels() {
+  siteLabelLayer.clearLayers();
+  if (!DATA || map.getZoom() >= 14) return;
+  DATA.sites.forEach(function (s) {
+    if (sitePins(s.name).length) return;
+    var pts = siteTrees(s.name).map(function (t) { return [t.lat, t.lon]; });
+    var c = s.lat != null ? [s.lat, s.lon] : (pts.length ? L.latLngBounds(pts).getCenter() : null);
+    if (!c) return;
+    L.marker(c, { icon: L.divIcon({ className: '', html: '<span class="site-label">' + esc(s.name) + '<b>' + pts.length + '</b></span>', iconSize: [0, 0] }), keyboard: false })
+      .on('click', function () { selectSite(s.name); }).addTo(siteLabelLayer);
+  });
+}
+map.on('zoomend', function () { renderSiteLabels(); if (DATA) renderPoints(); });
+
+/* ------------------------------------------------ data + state */
+var DATA = null, SITE = '__all', HIDDEN = {}, OVERLAYS = {}, LOCAL = [], MARKERS = [];
+var PALETTE = ['#4fc3f7', '#ffd166', '#ef476f', '#7bd389', '#f4a259', '#b388ff', '#2ec4b6', '#ff8fab', '#e9ff70', '#90a4ff', '#ffadad', '#a0c4ff', '#caffbf', '#fdffb6', '#bdb2ff', '#ffc6ff']; // tuned to read on satellite imagery
+var FIXED = {
+  status: { 'Accepted': '#7bd389', 'Pending': '#ffd166', 'Hold': '#f4a259', 'Not Selected': '#b0b8b3' },
+  gps: { 'Surveyed': '#4fc3f7', 'Breeder reported': '#ffd166', 'Survey point only': '#d7dcd8' },
+  geno: { 'Genotype data available': '#7bd389', 'Genotyping in progress': '#ffd166', 'Selected, not yet plated': '#4fc3f7', 'Not genotyped': '#b0b8b3', 'Not sampled': '#e7ebe8' },
+  pheno: { 'Phenotype data available': '#7bd389', 'No phenotype data recorded': '#d7dcd8' }
+};
+var colorCache = {};
+function colorFor(attr, val) {
+  if (attr === 'mother') return Viz.isNone(val) || val === 'Not given' ? '#d7dcd8' : Viz.color('mother', val);
+  if (FIXED[attr] && FIXED[attr][val]) return FIXED[attr][val];
+  if (!val) return '#ffffff';
+  var key = attr + '|' + val; if (colorCache[key]) return colorCache[key];
+  var used = Object.keys(colorCache).filter(function (k) { return k.indexOf(attr + '|') === 0; }).length;
+  return (colorCache[key] = PALETTE[used % PALETTE.length]);
+}
+function attrVal(t, attr) { return t[attr] || (attr === 'popGroup' ? '' : 'Not recorded'); }
+
+/* ------------------------------------------------ sites */
+function inScope(t, name) { return name === '__all' || t.site === name || (name === '__none' && !t.site); }
+function allTrees(name) { return DATA.trees.filter(function (t) { return inScope(t, name); }); }
+function scopePins(name) { return (DATA.pins || []).filter(function (p) { return name === '__all' || (p.site ? p.site === name : name === '__none'); }); }
+function siteTrees(name) { return DATA.trees.filter(function (t) { return t.lat != null && (name === '__all' || t.site === name || (name === '__none' && !t.site)); }); }
+function renderSites() {
+  var opts = [['__all', 'All sites']].concat(DATA.sites.map(function (s) { return [s.name, s.name]; }));
+  if (DATA.trees.some(function (t) { return !t.site; })) opts.push(['__none', 'Not assigned to a site']);
+  $('siteSel').innerHTML = opts.map(function (o) { return '<option value="' + esc(o[0]) + '">' + esc(o[1]) + '</option>'; }).join('');
+  $('siteList').innerHTML = opts.map(function (o) {
+    var n = allTrees(o[0]).length, s = DATA.sites.filter(function (x) { return x.name === o[0]; })[0];
+    var ov = s ? s.overlays.length : 0;
+    return '<li data-site="' + esc(o[0]) + '"><span>' + esc(o[1]) + (s && s.program ? '<br><span class="hint">' + esc(s.program) + '</span>' : '') + '</span><span class="ct">' + n + ' trees' + (ov ? ' · ' + ov + ' layer' + (ov > 1 ? 's' : '') : '') + '</span></li>';
+  }).join('');
+}
+function renderProfile() {
+  var by = $('profileBy').value, trees = allTrees(SITE), c = {};
+  trees.forEach(function (t) { var v = t[by] || 'Not recorded'; c[v] = (c[v] || 0) + 1; });
+  Viz.scale('profile-' + by, c);
+  var keys = Object.keys(c).sort(function (a, b) { return Viz.isNone(a) - Viz.isNone(b) || c[b] - c[a]; }), max = Math.max.apply(null, keys.map(function (k) { return c[k]; }).concat([1]));
+  $('profile').innerHTML = keys.length ? keys.slice(0, 14).map(function (k) {
+    var col = by === 'mother' ? colorFor('mother', k) : (FIXED[by] && FIXED[by][k]) || Viz.color('profile-' + by, k);
+    return '<div class="prof-row"><span class="l" title="' + esc(k) + '"><i class="swatch" style="background:' + col + '"></i>' + esc(k) + '</span><span class="b"><i style="width:' + (c[k] / max * 100) + '%;background:' + col + '"></i></span><span class="n">' + c[k] + '</span></div>';
+  }).join('') + (keys.length > 14 ? '<p class="prof-note">+ ' + (keys.length - 14) + ' more</p>' : '') + '<p class="prof-note">' + trees.length + ' submitted trees' + (SITE === '__all' ? ' across all sites' : ' at this site') + '.</p>' : '<p class="prof-note">No trees submitted for this site yet.</p>';
+}
+function selectSite(name, fly) {
+  SITE = name; $('siteSel').value = name; pref('site', name);
+  [].forEach.call($('siteList').children, function (li) { li.classList.toggle('on', li.dataset.site === name); });
+  renderLayers(); renderPoints(); renderModels(); renderProfile();
+  if (fly !== false) flyToSite(name);
+}
+function flyToSite(name) {
+  var s = DATA.sites.filter(function (x) { return x.name === name; })[0];
+  var pts = siteTrees(name).map(function (t) { return [t.lat, t.lon]; });
+  if (name !== '__all') DATA.unlinked.forEach(function (u) { if (u.site === name) pts.push([u.lat, u.lon]); });
+  sitePins(name).forEach(function (p) { pts.push([p.lat, p.lon]); });
+  var mapped = siteTrees(name).length + (name !== '__all' ? DATA.unlinked.filter(function (u) { return u.site === name; }).length : 0);
+  if (s && s.lat != null && s.zoom && !mapped) { map.flyTo([s.lat, s.lon], s.zoom, { duration: .8 }); return; }
+  if (s) s.overlays.forEach(function (o) { if (o.bounds) pts.push(o.bounds[0], o.bounds[1]); });
+  if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.15), name === '__all' ? { maxZoom: 20, duration: .8, paddingTopLeft: [map.getSize().x > 700 ? 200 : 30, 60], paddingBottomRight: [map.getSize().x > 700 ? 260 : 30, 60] } : { maxZoom: 20, duration: .8 });
+  else if (s && s.lat != null) map.flyTo([s.lat, s.lon], 18, { duration: .8 });
+  else if (name === '__all' && DATA.sites.some(function (x) { return x.lat != null; })) map.flyToBounds(L.latLngBounds(DATA.sites.filter(function (x) { return x.lat != null; }).map(function (x) { return [x.lat, x.lon]; })).pad(0.3), { maxZoom: 12 });
+}
+function stepSite(d) { var o = [].map.call($('siteSel').options, function (x) { return x.value; }); var i = (o.indexOf(SITE) + d + o.length) % o.length; selectSite(o[i]); }
+
+/* ------------------------------------------------ overlays */
+function driveDirect(url) { var m = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]+)/); return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w4000' : url; }
+var georasterReady = null;
+function loadScript(src) { return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('Could not load ' + src)); }; document.head.appendChild(s); }); }
+function ensureGeoraster() {
+  if (!georasterReady) georasterReady = loadScript('https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js')
+    .then(function () { return loadScript('https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js'); });
+  return georasterReady;
+}
+function makeOverlay(o) {
+  if (o.type === 'XYZ Tiles') return Promise.resolve(L.tileLayer(o.url, { pane: 'overlays', maxZoom: 23, maxNativeZoom: 22, tms: /\{-y\}/.test(o.url) ? false : false, bounds: o.bounds || undefined }));
+  if (o.type === 'Image') {
+    if (!o.bounds) return Promise.reject(new Error('Image overlay needs Image Bounds (S,W,N,E)'));
+    return Promise.resolve(L.imageOverlay(driveDirect(o.url), o.bounds, { pane: 'overlays', interactive: false }));
+  }
+  if (o.type === 'GeoTIFF (COG)') return ensureGeoraster().then(function () { return parseGeoraster(o.url); }).then(function (gr) { return new GeoRasterLayer({ georaster: gr, pane: 'overlays', resolution: 256 }); });
+  return Promise.reject(new Error('Unknown overlay type ' + o.type));
+}
+function overlayKey(site, i) { return site + '#' + i; }
+function visibleSites() { return $('allOverlays').checked || SITE === '__all' ? DATA.sites : DATA.sites.filter(function (s) { return s.name === SITE; }); }
+function renderLayers() {
+  var html = '', any = false;
+  visibleSites().forEach(function (s) {
+    s.overlays.forEach(function (o, i) {
+      any = true;
+      var k = overlayKey(s.name, i), st = OVERLAYS[k] || {};
+      html += '<div class="layer' + (st.error ? ' err' : '') + '" data-k="' + esc(k) + '"><label><input type="checkbox" data-ov="' + esc(k) + '"' + (st.on ? ' checked' : '') + '><span><b>' + esc(o.label) + '</b><br><span class="meta">' + esc([s.name, o.date, o.sensor].filter(Boolean).join(' · ')) + '</span>' + (st.error ? '<br><span class="meta" style="color:#b3261e">' + esc(st.error) + '</span>' : '') + '</span></label>' +
+        '<input type="range" min="0" max="100" value="' + Math.round((st.opacity == null ? 1 : st.opacity) * 100) + '" data-op="' + esc(k) + '" aria-label="Opacity"' + (st.on ? '' : ' hidden') + '></div>';
+    });
+  });
+  LOCAL.forEach(function (l, i) {
+    any = true;
+    html += '<div class="layer"><label><input type="checkbox" data-local="' + i + '"' + (map.hasLayer(l.layer) ? ' checked' : '') + '><span><b>' + esc(l.name) + '</b><br><span class="meta">Local file · this session only</span></span></label><input type="range" min="0" max="100" value="' + Math.round(l.opacity * 100) + '" data-lop="' + i + '"></div>';
+  });
+  $('layers').innerHTML = any ? html : '<p class="hint" style="margin:0">No overlays for this site yet. Add an M3M orthomosaic on the Field Sites tab, or load one from this computer below.</p>';
+}
+function toggleOverlay(k, on) {
+  var parts = k.split('#'), i = +parts.pop(), sname = parts.join('#');
+  var s = DATA.sites.filter(function (x) { return x.name === sname; })[0], o = s.overlays[i];
+  var st = OVERLAYS[k] = OVERLAYS[k] || { opacity: 1 };
+  st.on = on;
+  if (!on) { if (st.layer) map.removeLayer(st.layer); renderLayers(); return; }
+  if (st.layer) { st.layer.addTo(map); renderLayers(); return; }
+  msg('Loading ' + o.label + '…');
+  makeOverlay(o).then(function (layer) {
+    st.layer = layer; st.error = null; setOpacity(layer, st.opacity);
+    if (layer.on) layer.on('tileerror', function () { if (!st.tileErr) { st.tileErr = true; msg('Some tiles for “' + o.label + '” failed to load — check the URL is public.', 5000); } });
+    if (st.on) layer.addTo(map);
+    msg('');
+    if (layer.getBounds && SITE === '__all') try { map.flyToBounds(layer.getBounds(), { maxZoom: 21 }); } catch (e) {}
+    renderLayers();
+  }).catch(function (e) { st.on = false; st.error = e.message || String(e); msg(''); renderLayers(); });
+}
+function setOpacity(layer, v) { if (layer.setOpacity) layer.setOpacity(v); }
+
+/* local overlays */
+var pendingImage = null;
+function handleLocal(file) {
+  var name = file.name;
+  if (/\.tiff?$/i.test(name)) {
+    msg('Reading ' + name + '…');
+    ensureGeoraster().then(function () { return file.arrayBuffer(); }).then(function (buf) { return parseGeoraster(buf); }).then(function (gr) {
+      var layer = new GeoRasterLayer({ georaster: gr, pane: 'overlays', resolution: 256, opacity: 1 });
+      LOCAL.push({ name: name, layer: layer, opacity: 1 }); layer.addTo(map); map.flyToBounds(layer.getBounds(), { maxZoom: 21 }); msg(''); renderLayers();
+    }).catch(function (e) { msg('Could not read that GeoTIFF: ' + (e.message || e), 7000); });
+  } else {
+    pendingImage = { name: name, url: URL.createObjectURL(file) };
+    $('localBounds').hidden = false; $('boundsIn').focus();
+  }
+}
+function placeImage() {
+  var b = $('boundsIn').value.split(/[,;\s]+/).map(Number).filter(function (x) { return !isNaN(x); });
+  if (b.length !== 4 || !pendingImage) { msg('Enter four numbers: south, west, north, east', 4000); return; }
+  var layer = L.imageOverlay(pendingImage.url, [[b[0], b[1]], [b[2], b[3]]], { pane: 'overlays' }).addTo(map);
+  LOCAL.push({ name: pendingImage.name, layer: layer, opacity: 1 }); map.flyToBounds(layer.getBounds(), { maxZoom: 21 });
+  pendingImage = null; $('localBounds').hidden = true; $('boundsIn').value = ''; renderLayers();
+}
+
+/* ------------------------------------------------ points */
+function metaRows(t) {
+  if (!t.sampled) return [['Maternal cultivar', t.mother], ['Status', 'Survey point only, not sampled'], ['Genotype', 'Not sampled'], ['Phenotype', t.pheno],
+    ['Field row / tree', t.fieldRow ? 'Row ' + t.fieldRow + ' · Tree ' + t.fieldTree : ''], ['Survey point', t.point], ['Elevation', t.elev != null ? t.elev + ' m' : ''], ['Coordinates', t.lat.toFixed(6) + ', ' + t.lon.toFixed(6)]];
+  var genoTxt = t.geno + (t.plate ? ' · plate ' + t.plate.replace(/;\s*/g, ', ') + (t.well ? ' (' + t.well.replace(/;\s*/g, ', ') + ')' : '') : '');
+  return [['Submission ID', t.subId], ['Maternal parent', t.mother], ['Species', t.species], ['Material', t.material],
+    ['Genotype', genoTxt], ['Phenotype', t.pheno], ['Position', [t.field, t.position].filter(Boolean).join(' · ')],
+    ['Survey row / tree', t.fieldRow ? 'Row ' + t.fieldRow + ' · Tree ' + t.fieldTree : ''],
+    ['Survey cultivar', t.gpsMother && Viz.esc(t.gpsMother) !== Viz.esc(t.mother) ? t.gpsMother + ' (differs from sample)' : ''],
+    ['Elevation', t.elev != null ? t.elev + ' m' : ''], ['Coordinates', t.lat.toFixed(6) + ', ' + t.lon.toFixed(6)], ['Notes', t.notes]];
+}
+function badge(t) {
+  var g = t.sampled ? t.geno : 'Not sampled';
+  var cls = /available/.test(g) ? 'ok' : /progress/.test(g) ? 'prog' : /plated/.test(g) ? 'sel' : 'none';
+  return '<span class="gbadge ' + cls + '">' + esc(g) + '</span>' + (/available/.test(t.pheno) ? '<span class="gbadge ok">Phenotype data</span>' : '');
+}
+function hoverHtml(t) {
+  return '<div class="hov"><div class="hov-h"><span class="swatch" style="background:' + colorFor('mother', t.mother) + '"></span><b>' + esc(t.sampled ? t.treeId : (t.mother || 'Survey point')) + '</b></div>' + badge(t) +
+    '<table>' + metaRows(t).filter(function (r) { return r[1]; }).slice(0, 9).map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</table></div>';
+}
+function popupHtml(t) {
+  return '<div class="pop"><h3>' + esc(t.sampled ? t.treeId : (t.point || 'Survey point')) + '</h3><div style="margin-bottom:8px">' + badge(t) + '</div><table>' + metaRows(t).filter(function (r) { return r[1]; }).map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</table>' +
+    '<div style="margin-top:8px"><a target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=' + t.lat + ',' + t.lon + '">Directions</a></div></div>';
+}
+var TIP = null;
+function pointsInScope() {
+  var pts = siteTrees(SITE).filter(function (t) { return $('showReported').checked || t.gps !== 'Breeder reported'; })
+    .map(function (t) { t.sampled = true; return t; });
+  if ($('showUnlinked').checked) DATA.unlinked.forEach(function (u) {
+    if (SITE !== '__all' && SITE !== '__none' && u.site !== SITE) return;
+    pts.push({ sampled: false, mother: u.mother, lat: u.lat, lon: u.lon, elev: u.elev, point: u.label, fieldRow: u.fieldRow, fieldTree: u.fieldTree, site: u.site,
+               geno: 'Not sampled', pheno: 'No phenotype data recorded', gps: 'Survey point only', status: 'Not sampled', species: '', material: '', program: '', popGroup: '' });
+  });
+  return pts;
+}
+function renderPoints() {
+  pointLayer.clearLayers(); unlinkedLayer.clearLayers(); MARKERS = [];
+  TIP = TIP || Viz.tip();
+  var attr = $('colorBy').value, q = $('search').value.trim().toLowerCase();
+  var pts = pointsInScope(), counts = {};
+  pts.forEach(function (t) { var v = attrVal(t, attr); counts[v] = (counts[v] || 0) + 1; });
+  var labels = $('labels').checked && map.getZoom() >= 20;
+  var z = map.getZoom(), R = z >= 21 ? 8 : z >= 20 ? 7 : z >= 19 ? 5.5 : z >= 18 ? 4 : z >= 17 ? 3 : 2.5; // shrink dots as you zoom out so trees don't overlap
+  // unsampled first so sampled trees draw on top
+  pts.sort(function (a, b) { return a.sampled - b.sampled; }).forEach(function (t) {
+    var v = attrVal(t, attr);
+    if (HIDDEN[attr + '|' + v]) return;
+    var hit = q && t.sampled && [t.treeId, t.subId, t.mother, t.father, t.field, t.position].join(' ').toLowerCase().indexOf(q) >= 0;
+    var m = L.circleMarker([t.lat, t.lon], t.sampled
+      ? { radius: hit ? 10 : R, color: hit ? '#b5612a' : '#ffffff', weight: hit ? 3.5 : 1.6, fillColor: colorFor(attr, v), fillOpacity: 1, dashArray: t.gps === 'Breeder reported' ? '2 2' : null }
+      : { radius: R * 0.7, color: '#ffffff', weight: 1, opacity: .85, fillColor: colorFor(attr, v), fillOpacity: .5 })
+      .bindPopup(popupHtml(t), { maxWidth: 340 });
+    m.on('mouseover mousemove', function (e) { if (!m.isPopupOpen()) TIP.show(hoverHtml(t), e.originalEvent); m.setStyle({ weight: t.sampled ? 3 : 2 }); });
+    m.on('mouseout', function () { TIP.hide(); m.setStyle({ weight: t.sampled ? (hit ? 3.5 : 1.6) : 1 }); });
+    m.on('click', function () { TIP.hide(); });
+    if (labels && t.sampled) m.bindTooltip(esc(t.treeId), { permanent: true, direction: 'right', offset: [6, 0], className: 'tlabel' });
+    m.addTo(t.sampled ? pointLayer : unlinkedLayer);
+    if (t.sampled) { m._tree = t; MARKERS.push(m); }
+  });
+  renderPins();
+  var keys = Object.keys(counts).sort(function (a, b) { return (Viz.isNone(a) || a === 'Not given') - (Viz.isNone(b) || b === 'Not given') || counts[b] - counts[a]; });
+  $('legend').innerHTML = (keys.map(function (k) { var id = attr + '|' + k; return '<label><input type="checkbox" data-leg="' + esc(id) + '"' + (HIDDEN[id] ? '' : ' checked') + '><span class="dot" style="background:' + colorFor(attr, k) + '"></span>' + esc(k) + '<span class="n">' + counts[k] + '</span></label>'; }).join('') +
+    (pts.some(function (t) { return !t.sampled; }) ? '<div class="legend-key"><span><i class="k1"></i>Sampled tree</span><span><i class="k2"></i>Survey point, not sampled</span></div>' : '')) ||
+    (sitePins(SITE).length ? '<span class="hint">No surveyed GPS points here yet. Trees are shown as one pin per site until individual points are added.</span>' : '<span class="hint">No trees with coordinates at this site yet.</span>');
+  renderStats();
+}
+function renderStats() {
+  var all = DATA.trees.filter(function (t) { return SITE === '__all' || t.site === SITE || (SITE === '__none' && !t.site); });
+  var withGps = all.filter(function (t) { return t.lat != null; }).length;
+  var surveyed = all.filter(function (t) { return t.gps === 'Surveyed'; }).length;
+  var inprog = all.filter(function (t) { return t.geno === 'Genotyping in progress'; }).length;
+  var unl = DATA.unlinked.filter(function (u) { return SITE === '__all' || u.site === SITE; }).length;
+  var noGps = all.filter(function (t) { return t.lat == null && !t.gpsRestricted; }).length, restr = all.filter(function (t) { return t.gpsRestricted; }).length;
+  $('stats').innerHTML = [[withGps, 'sampled trees mapped'], [inprog, 'genotyping in progress'], [unl, 'survey points not sampled'], [surveyed, 'linked to survey points']]
+    .concat(restr ? [[restr, 'positions restricted by breeder']] : []).concat([[noGps, 'awaiting GPS survey']])
+    .map(function (s) { return '<div class="stat"><b>' + s[0].toLocaleString() + '</b><span>' + s[1] + '</span></div>'; }).join('');
+}
+function renderModels() {
+  var ms = [];
+  visibleSites().forEach(function (s) { s.models.forEach(function (m) { ms.push({ site: s.name, m: m }); }); });
+  $('modelsSec').hidden = !ms.length;
+  $('models').innerHTML = ms.map(function (x) { return '<a target="_blank" rel="noopener" href="' + esc(x.m.url) + '">↗ ' + esc(x.m.label) + '</a><span class="hint">' + esc([x.site, x.m.date].filter(Boolean).join(' · ')) + '</span>'; }).join('');
+}
+function findTree() {
+  var q = $('search').value.trim().toLowerCase(); renderPoints(); if (!q) return;
+  var hit = MARKERS.filter(function (m) { return [m._tree.treeId, m._tree.subId].join(' ').toLowerCase() === q; })[0] ||
+            MARKERS.filter(function (m) { return [m._tree.treeId, m._tree.subId, m._tree.mother, m._tree.father, m._tree.field, m._tree.position].join(' ').toLowerCase().indexOf(q) >= 0; })[0];
+  if (!hit) {
+    var t = DATA.trees.filter(function (x) { return x.lat != null && [x.treeId, x.subId].join(' ').toLowerCase().indexOf(q) >= 0; })[0];
+    if (t && SITE !== '__all') { selectSite('__all', false); return findTree(); }
+    msg('No mapped tree matches “' + q + '”', 3000); return;
+  }
+  map.flyTo(hit.getLatLng(), Math.max(map.getZoom(), 20)); setTimeout(function () { hit.openPopup(); }, 700);
+}
+
+/* ------------------------------------------------ wiring */
+function wire() {
+  $('siteSel').onchange = function () { selectSite(this.value); };
+  $('siteList').onclick = function (e) { var li = e.target.closest('li'); if (li) { selectSite(li.dataset.site); $('side').classList.remove('open'); } };
+  $('prevSite').onclick = function () { stepSite(-1); }; $('nextSite').onclick = function () { stepSite(1); };
+  document.addEventListener('keydown', function (e) { if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowLeft' && e.altKey) stepSite(-1); if (e.key === 'ArrowRight' && e.altKey) stepSite(1); if (e.key === '[') stepSite(-1); if (e.key === ']') stepSite(1); });
+  $('layers').addEventListener('change', function (e) {
+    var d = e.target.dataset;
+    if (d.ov) toggleOverlay(d.ov, e.target.checked);
+    if (d.local !== undefined) { var l = LOCAL[+d.local]; if (e.target.checked) l.layer.addTo(map); else map.removeLayer(l.layer); }
+  });
+  $('layers').addEventListener('input', function (e) {
+    var d = e.target.dataset, v = e.target.value / 100;
+    if (d.op) { var st = OVERLAYS[d.op]; st.opacity = v; if (st.layer) setOpacity(st.layer, v); }
+    if (d.lop !== undefined) { var l = LOCAL[+d.lop]; l.opacity = v; setOpacity(l.layer, v); }
+  });
+  $('allOverlays').onchange = function () { renderLayers(); renderModels(); };
+  $('profileBy').onchange = renderProfile;
+  $('colorBy').onchange = function () { pref('color', this.value); renderPoints(); };
+  $('legend').addEventListener('change', function (e) { var id = e.target.dataset.leg; if (id) { if (e.target.checked) delete HIDDEN[id]; else HIDDEN[id] = 1; renderPoints(); } });
+  $('search').addEventListener('change', findTree);
+  $('search').addEventListener('keydown', function (e) { if (e.key === 'Enter') findTree(); });
+  ['labels', 'showUnlinked', 'showReported'].forEach(function (id) { $(id).onchange = renderPoints; });
+  var drop = $('localDrop'), fi = $('localFile');
+  drop.onclick = function () { fi.click(); }; fi.onchange = function () { if (fi.files[0]) handleLocal(fi.files[0]); fi.value = ''; };
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { if (e.dataTransfer.files[0]) handleLocal(e.dataTransfer.files[0]); });
+  $('boundsGo').onclick = placeImage;
+  $('toggleSide').onclick = function () { $('side').classList.toggle('open'); };
+}
+
+(async function init() {
+  wire();
+  setBase('Satellite');
+  if (pref('color')) $('colorBy').value = pref('color');
+  msg('Loading trees and sites…');
+  var params = await getParams();
+  try { DATA = await call('getMapData', (window.Access && Access.code()) || params.key || ''); }
+  catch (e) { msg(e.message || String(e)); return; }
+  msg('');
+  var nRestricted = DATA.trees.filter(function (t) { return t.gpsRestricted; }).length, roleNow = DATA.role || 'public';
+  if (nRestricted || roleNow !== 'public') {
+    $('accessNote').hidden = false;
+    $('accessNote').innerHTML = roleNow === 'public'
+      ? '<p><b>' + nRestricted + ' trees</b> have exact GPS positions that breeders have limited to the project team or to research collaborators and NNGA members. Sites are shown as general locations.</p><button class="btn" data-access>Enter access code</button>'
+      : '<p>Signed in as <b>' + esc(Access.LABEL[roleNow]) + '</b>.' + (nRestricted ? ' ' + nRestricted + ' trees remain restricted to the project team by their breeders.' : ' You can see every exact position released to you.') + '</p><button class="btn secondary" data-access>Access settings</button>';
+  }
+  var mc = {}; DATA.trees.forEach(function (t) { var v = t.mother || 'Not recorded'; mc[v] = (mc[v] || 0) + 1; }); Viz.scale('mother', mc);
+  $('searchList').innerHTML = DATA.trees.filter(function (t) { return t.lat != null; }).slice(0, 3000).map(function (t) { return '<option value="' + esc(t.treeId) + '">'; }).join('');
+  renderSites(); renderSiteLabels();
+  var start = params.site || pref('site') || '__all';
+  if (![].some.call($('siteSel').options, function (o) { return o.value === start; })) start = '__all';
+  selectSite(start);
+})();
+</script>
+</body>
+</html>
