@@ -22,7 +22,15 @@ Static website (GitHub Pages) + Google Sheets database for the Rodale Institute 
 
 Breeders never need a Google account or access to the sheet. The sheet stays private to the project team.
 
-Field maps uploaded with a submission are saved to a Google Drive folder (`CONFIG.FIELD_MAP_FOLDER`, created automatically, 15 MB limit) and linked from every tree in that batch. This is why the script asks for Google Drive permission.
+Every submission is also archived in a private Google Drive folder (`CONFIG.FIELD_MAP_FOLDER`, created by the script):
+
+```
+<folder>/<PROGRAM>/<batchId>/field-map__<file>            field map, if attached (15 MB limit)
+<folder>/<PROGRAM>/<batchId>/original__<file>.xlsx        the breeder's uploaded spreadsheet(s)
+<folder>/<PROGRAM>/<batchId>/record__submitted_rows.csv   every tree in the batch + sharing choices
+```
+
+Submissions are saved into the project's **03 Breeder submissions** folder (`CONFIG.UPLOAD_FOLDER_ID`). Writing into an existing folder needs Google's full Drive permission, and the Google account that deploys the script must have edit access to that folder. To use the limited **drive.file** permission instead, set `UPLOAD_FOLDER_ID: ''` and change the scope in `appsscript.json` to `drive.file`; the script then saves into a folder it creates itself. Links are written to the trees in each batch and to the *Submission Log* tab. Share the folder with project staff only; never put these files in this public repo. If saving fails, the submission still goes through and the log notes the file was "received but not stored". (A private-GitHub-repo option is also in `Code.gs`: set `UPLOAD_STORE: 'github'`.)
 
 ---
 
