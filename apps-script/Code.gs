@@ -24,7 +24,23 @@ var CONFIG = {
   SITE_URL: 'https://rodaleprp.github.io/Chinese-Chestnut-Genotyping-Project/',                // your GitHub Pages address, e.g. https://USERNAME.github.io/chestnut-genotyping/
   RAW_DATA_POLICY: 'On request only, with breeder permission, before publication',
   GENOTYPED_PLATES: [],        // DArT plate numbers whose genotype data has been returned, e.g. ['001', '002']
-  FIELD_MAP_FOLDER: 'Chestnut Genotyping – Field Maps', // Drive folder (created if missing) for field maps uploaded with submissions
+  // Where uploaded files (field maps, the breeder's original spreadsheet, and a CSV copy of every submission) are kept:
+  //   'github' = a PRIVATE GitHub repository (set GITHUB_UPLOAD_REPO below and add a token as Script Property GITHUB_TOKEN)
+  //   'drive'  = a Google Drive folder (FIELD_MAP_FOLDER). Uses the limited "drive.file" permission:
+  //              the script can only see files and folders it created itself, nothing else in your Drive.
+  //   'github' = private GitHub repo (also add the script.external_request scope to appsscript.json)
+  // If the chosen store is not set up or not permitted, the submission is still saved and the sheet notes the file was not stored.
+  UPLOAD_STORE: 'drive',
+  GITHUB_UPLOAD_REPO: 'RodalePRP/Chinese-Chestnut-Genotyping-Uploads',   // keep this repository PRIVATE
+  GITHUB_UPLOAD_BRANCH: 'main',
+  FIELD_MAP_FOLDER: 'Chestnut Genotyping – Field Maps', // Drive folder the script creates if UPLOAD_FOLDER_ID can't be used
+  // Existing Drive folder to save submissions into ("03 Breeder submissions" in the project folder).
+  // Needs the full "drive" scope in appsscript.json, and the account that deploys this script must be able to edit the folder.
+  // Leave '' to have the script create its own folder instead (works with the limited "drive.file" scope).
+  UPLOAD_FOLDER_ID: '1shGRu5t0cusMVPNxPwYUayu4JZr8QhgN',
+  // CSV files in "01 Database imports" loaded by the menu item "Import Rodale trees + GPS points".
+  IMPORT_TREES_CSV: { id: '18BB21ySLwo_e5Qb8S1iFO23_D_QnQHVR', prefix: 'RI' },  // CC_Rodale_trees_import.csv (183 trees: North Orchard, Schantz, TAC)
+  IMPORT_GPS_CSV: '1wparIgU1-oSfpLFkoAK1GKcNaVV367-f',                        // CC_GPS_Points_import.csv (247 points: North Orchard + Schantz)
   FIELD_MAP_MAX_MB: 15,
   // Access codes for restricted views on the website (share privately). Leave blank to disable that level.
   TEAM_ACCESS_CODE: '',        // project team: sees everything, including "Project team only" data
@@ -165,6 +181,8 @@ function onOpen() {
     .addItem('Build plate maps', 'buildPlateMaps')
     .addSeparator()
     .addItem('Set up / repair workbook', 'setupWorkbook')
+    .addItem('Create / open upload folder', 'setupUploadFolder')
+    .addItem('Import Rodale trees + GPS points', 'importRodaleData')
     .addToUi();
 }
 
@@ -448,8 +466,8 @@ function buildPrimer_(ss) {
 
 function buildLog_(ss) {
   var sh = ss.getSheetByName(TAB.LOG) || ss.insertSheet(TAB.LOG);
-  if (sh.getLastRow() === 0) {
-    sh.getRange(1, 1, 1, 13).setValues([['Received', 'Batch ID', 'Program', 'Submitter', 'Email', 'Trees', 'First ID', 'Last ID', 'Field Map', 'Genotype Visualization', 'Phenotype Visualization', 'GPS Position Access', 'Data Policy Accepted']])
+  {  // header is (re)written every setup so new columns appear; existing log rows are kept
+    sh.getRange(1, 1, 1, 16).setValues([['Received', 'Batch ID', 'Program', 'Submitter', 'Email', 'Trees', 'First ID', 'Last ID', 'Field Map', 'Genotype Visualization', 'Phenotype Visualization', 'GPS Position Access', 'Data Policy Accepted', 'Original File(s)', 'Submission Record (CSV)', 'Notes / Data Entry Needed']])
       .setFontWeight('bold').setBackground(COLOR.header).setFontColor('#fff');
     sh.setFrozenRows(1);
   }
@@ -471,7 +489,7 @@ function buildSimpleTab_(ss, name, cols, color, listHeader, listValues) {
 
 // ───────────────────────────── JSON API (for the GitHub Pages site) ─────────────────────────────
 var API_ACTIONS = { getPortalConfig: getPortalConfig, checkExisting: checkExisting, submitBatch: submitBatch, getMapData: getMapData, getSummary: getSummary, getTrees: getTrees,
-                    checkAccess: checkAccess, getResults: getResults };
+                    checkAccess: checkAccess, getResults: getResults, sendList: sendList };
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
@@ -863,8 +881,12 @@ function submitBatch(payload) {
 
     var props = PropertiesService.getScriptProperties();
     var key = 'batch_' + payload.batchId;
-    var acc = JSON.parse(props.getProperty(key) || '{"n":0,"first":"","last":"","map":""}');
-    if (payload.fieldMap && payload.fieldMap.data && !acc.map) acc.map = saveFieldMap_(payload.fieldMap, p, payload.batchId);
+    var acc = JSON.parse(props.getProperty(key) || '{"n":0,"first":"","last":"","map":"","files":[]}');
+    acc.files = acc.files || [];
+    // Files arrive with the first chunk. A storage problem never blocks the submission itself.
+    if (payload.fieldMap && payload.fieldMap.data && !acc.map) acc.map = storeUpload_(payload.fieldMap, p, payload.batchId, 'field-map');
+    (payload.sourceFiles || []).forEach(function (f) { if (f && f.data) acc.files.push(storeUpload_(f, p, payload.batchId, 'original')); });
+    if (payload.rowsCsv && !acc.csv) acc.csv = storeUpload_({ name: 'submitted_rows.csv', type: 'text/csv', data: Utilities.base64Encode(payload.rowsCsv, Utilities.Charset.UTF_8) }, p, payload.batchId, 'record');
 
     var existing = existingTreeIds_(sh);
     var now = new Date();
@@ -910,7 +932,7 @@ function submitBatch(payload) {
     if (payload.final) {
       props.deleteProperty(key);
       var log = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB.LOG);
-      if (log) log.appendRow([now, payload.batchId, p.label, contact.name, contact.email, acc.n, acc.first, acc.last, acc.map || '', vis(priv.genoVis), vis(priv.phenoVis), vis(priv.gpsVis), now]);
+      if (log) log.appendRow([now, payload.batchId, p.label, contact.name, contact.email, acc.n, acc.first, acc.last, acc.map || '', vis(priv.genoVis), vis(priv.phenoVis), vis(priv.gpsVis), now, (acc.files || []).join('\n'), acc.csv || '']);
       acc.genoVis = vis(priv.genoVis); acc.phenoVis = vis(priv.phenoVis); acc.gpsVis = vis(priv.gpsVis);
       notify_(p, contact, payload.batchId, acc);
     }
@@ -920,16 +942,142 @@ function submitBatch(payload) {
   }
 }
 
-/** Saves an uploaded field map (base64) to the project's Drive folder and returns its link. */
-function saveFieldMap_(f, p, batchId) {
-  var bytes = Utilities.base64Decode(String(f.data).replace(/^data:[^,]*,/, ''));
-  if (bytes.length > CONFIG.FIELD_MAP_MAX_MB * 1024 * 1024) throw new Error('Field map is larger than ' + CONFIG.FIELD_MAP_MAX_MB + ' MB.');
-  var it = DriveApp.getFoldersByName(CONFIG.FIELD_MAP_FOLDER);
-  var folder = it.hasNext() ? it.next() : DriveApp.createFolder(CONFIG.FIELD_MAP_FOLDER);
-  var name = p.prefix + '_' + batchId + '_' + String(f.name || 'field-map').replace(/[^\w.\- ]+/g, '_');
+/**
+ * A breeder sends a tree list in whatever form they have (photo of a notebook, PDF, Word, an odd spreadsheet)
+ * for the project team to enter. Files are stored like any upload; the Submission Log row is flagged for data entry.
+ */
+function sendList(payload) {
+  var p = programByPrefix_(payload.prefix);
+  var contact = payload.contact || {};
+  if (!contact.name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email || '')) throw new Error('Submitter name and a valid email are required.');
+  var priv = payload.privacy || {};
+  if (!priv.agree) throw new Error('Please accept the data-sharing terms before sending.');
+  var files = (payload.files || []).filter(function (f) { return f && f.data; });
+  var note = String(payload.note || '').slice(0, 5000);
+  if (!files.length && !note.trim()) throw new Error('Attach a file or type your list.');
+  if (files.length > 10) throw new Error('Please send at most 10 files at once.');
+  var vis = function (v) { return v === ACCESS.MEMBER ? ACCESS.MEMBER : ACCESS.TEAM; };
+  var batchId = payload.batchId, now = new Date();
+  var links = files.map(function (f) { return storeUpload_(f, p, batchId, 'list-to-enter'); });
+  var map = payload.fieldMap && payload.fieldMap.data ? storeUpload_(payload.fieldMap, p, batchId, 'field-map') : '';
+  var log = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TAB.LOG);
+  if (log) log.appendRow([now, batchId, p.label, contact.name, contact.email, 'List for data entry', '', '', map, vis(priv.genoVis), vis(priv.phenoVis), vis(priv.gpsVis), now, links.join('\n'), '',
+    'DATA ENTRY NEEDED' + (payload.approx ? ' · about ' + payload.approx + ' trees' : '') + (note ? '\n' + note : '')]);
+  try {
+    if (CONFIG.SEND_RECEIPTS) MailApp.sendEmail(contact.email, 'Chestnut genotyping: your tree list was received',
+      'Hi ' + contact.name + ',\n\nThank you. We received your tree list for ' + p.label + ' (reference ' + batchId + ').\n' +
+      'The project team will enter the trees and email you the Submission IDs, or contact you with any questions.\n\n' +
+      'Your data-sharing choices:\n- Raw genotype data: ' + CONFIG.RAW_DATA_POLICY + '\n- Genotype visualizations: ' + vis(priv.genoVis) + '\n- Phenotype visualizations: ' + vis(priv.phenoVis) + '\n- Exact GPS positions: ' + vis(priv.gpsVis) + '\n\nRichard Tegtmeier · Rodale Institute');
+    if (CONFIG.NOTIFY_ADMIN) MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '[Chestnut DB] DATA ENTRY NEEDED: list from ' + p.label,
+      contact.name + ' <' + contact.email + '> sent a tree list to enter' + (payload.approx ? ' (about ' + payload.approx + ' trees)' : '') + '.\nReference ' + batchId + '\n\n' + (note ? 'Their note / list:\n' + note + '\n\n' : '') + 'Files:\n' + (links.join('\n') || '(none)') + '\n\n' + SpreadsheetApp.getActiveSpreadsheet().getUrl());
+  } catch (e) { console.warn('Email failed: ' + e); }
+  return { batchId: batchId, files: links.length };
+}
+
+/** Stores one uploaded file in the configured place and returns its link (or a note saying why it was not stored). */
+function storeUpload_(f, p, batchId, kind) {
+  try {
+    var bytes = Utilities.base64Decode(String(f.data).replace(/^data:[^,]*,/, ''));
+    if (bytes.length > CONFIG.FIELD_MAP_MAX_MB * 1024 * 1024) return 'Not stored (larger than ' + CONFIG.FIELD_MAP_MAX_MB + ' MB): ' + f.name;
+    if (CONFIG.UPLOAD_STORE === 'github') return saveToGitHub_(bytes, f, p, batchId, kind);
+    return saveToDrive_(bytes, f, p, batchId, kind);
+  } catch (err) {
+    console.warn(err);
+    return 'Received but not stored (' + String(err && err.message || err).slice(0, 80) + '): ' + String(f.name || '');
+  }
+}
+
+/** Commits a file to the private uploads repository: submissions/<PREFIX>/<batch>/<kind>__<name>. */
+function saveToGitHub_(bytes, f, p, batchId, kind) {
+  var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  if (!token) throw new Error('GITHUB_TOKEN script property is not set');
+  var name = kind + '__' + String(f.name || 'file').replace(/[^\w.\- ]+/g, '_').replace(/\s+/g, '_');
+  var path = 'submissions/' + p.prefix + '/' + batchId + '/' + name;
+  var url = 'https://api.github.com/repos/' + CONFIG.GITHUB_UPLOAD_REPO + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+  var res = UrlFetchApp.fetch(url, {
+    method: 'put', muteHttpExceptions: true, contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
+    payload: JSON.stringify({ message: p.label + ' – ' + kind + ' for batch ' + batchId, content: Utilities.base64Encode(bytes), branch: CONFIG.GITHUB_UPLOAD_BRANCH })
+  });
+  var code = res.getResponseCode();
+  if (code !== 200 && code !== 201) throw new Error('GitHub ' + code + ' ' + res.getContentText().slice(0, 120));
+  return JSON.parse(res.getContentText()).content.html_url;
+}
+
+/** Folder created and owned by this script (found again by ID, so only the limited drive.file permission is needed). */
+function uploadFolder_() {
+  if (CONFIG.UPLOAD_FOLDER_ID) {
+    try { var target = DriveApp.getFolderById(CONFIG.UPLOAD_FOLDER_ID); target.getName(); return target; }
+    catch (e) { console.warn('UPLOAD_FOLDER_ID not usable (' + e + '); falling back to the script\'s own folder.'); }
+  }
+  var props = PropertiesService.getScriptProperties(), id = props.getProperty('UPLOAD_FOLDER_ID');
+  if (id) { try { var f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) {} }
+  var folder = DriveApp.createFolder(CONFIG.FIELD_MAP_FOLDER);
+  props.setProperty('UPLOAD_FOLDER_ID', folder.getId());
+  return folder;
+}
+function childFolder_(parent, name) {
+  var key = 'UPLOAD_SUB_' + parent.getId() + '_' + name, props = PropertiesService.getScriptProperties(), id = props.getProperty(key);
+  if (id) { try { return DriveApp.getFolderById(id); } catch (e) {} }
+  var f = parent.createFolder(name); props.setProperty(key, f.getId()); return f;
+}
+
+/** Saves a file to <upload folder>/<PROGRAM>/<batch>/<kind>__<name> and returns its link. */
+function saveToDrive_(bytes, f, p, batchId, kind) {
+  var folder = childFolder_(childFolder_(uploadFolder_(), p.prefix), batchId);
+  var name = kind + '__' + String(f.name || 'file').replace(/[^\w.\- ]+/g, '_');
   var file = folder.createFile(Utilities.newBlob(bytes, f.type || 'application/octet-stream', name));
-  file.setDescription('Field map for ' + p.label + ', batch ' + batchId);
+  file.setDescription(p.label + ' – ' + kind + ' for batch ' + batchId);
   return file.getUrl();
+}
+
+/**
+ * Loads the prepared Rodale data (plates 001–002: North Orchard, Schantz, TAC) and the GPS survey points
+ * from the CSV files in Drive. Safe to re-run: trees and points already in the Sheet are skipped.
+ */
+function importRodaleData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var num = function (v) { return v === '' || isNaN(Number(v)) ? v : Number(v); };
+  var readCsv = function (id) { return Utilities.parseCsv(DriveApp.getFileById(id).getBlob().getDataAsString('UTF-8')); };
+
+  // Trees → program tab (Master Submission picks them up automatically)
+  var cfg = CONFIG.IMPORT_TREES_CSV, sh = sheetForPrefix_(cfg.prefix);
+  var data = readCsv(cfg.id), head = data.shift();
+  if (head.length !== COLUMNS.length) throw new Error('Tree file has ' + head.length + ' columns; the Sheet expects ' + COLUMNS.length + '.');
+  var have = existingTreeIds_(sh), numeric = { row: 1, lat: 1, lon: 1, year: 1 }, dateCol = colIdx_('submittedAt') - 1;
+  var trees = data.filter(function (r) { return String(r[colIdx_('treeId') - 1]).trim() && !have[normId_(r[colIdx_('treeId') - 1])]; })
+    .map(function (r) { return r.map(function (v, i) { if (numeric[COLUMNS[i].key]) return num(v); if (i === dateCol && v) return new Date(v.replace(' ', 'T')); return v; }); });
+  if (trees.length) {
+    var start = lastDataRow_(sh) + 1;
+    ensureSize_(sh, start + trees.length, COLUMNS.length);
+    sh.getRange(start, 1, trees.length, COLUMNS.length).setValues(trees);
+  }
+
+  // GPS points → GPS Points tab
+  var g = ss.getSheetByName(TAB.GPS);
+  if (!g) throw new Error('GPS Points tab is missing — run Set up / repair workbook.');
+  var gdata = readCsv(CONFIG.IMPORT_GPS_CSV); gdata.shift();
+  var ptCol = GPS_COLUMNS.map(function (c) { return c[0]; }).indexOf('Trimble Point Name');
+  var last = g.getLastRow(), seen = {};
+  if (last > 1) g.getRange(2, ptCol + 1, last - 1, 1).getValues().forEach(function (r) { if (r[0]) seen[normId_(r[0])] = true; });
+  var gnum = { 3: 1, 4: 1, 5: 1, 6: 1, 10: 1, 11: 1 };  // lat, lon, elevation, accuracy, field row, field tree
+  var pts = gdata.filter(function (r) { return r[ptCol] && !seen[normId_(r[ptCol])]; })
+    .map(function (r) { var o = r.slice(0, GPS_COLUMNS.length); while (o.length < GPS_COLUMNS.length) o.push(''); return o.map(function (v, i) { return gnum[i] ? num(v) : v; }); });
+  if (pts.length) {
+    var gStart = 2; if (last > 1) { var col = g.getRange(2, 1, last - 1, GPS_COLUMNS.length).getValues(); for (var i = col.length - 1; i >= 0; i--) if (col[i].join('')) { gStart = i + 3; break; } }
+    ensureSize_(g, gStart + pts.length, GPS_COLUMNS.length);
+    g.getRange(gStart, 1, pts.length, GPS_COLUMNS.length).setValues(pts);
+  }
+  var msg = 'Added ' + trees.length + ' trees to "' + sh.getName() + '" and ' + pts.length + ' GPS points.' +
+            (trees.length || pts.length ? '' : ' Everything was already in the Sheet.') + '\nThe website shows them right away (refresh the page).';
+  try { SpreadsheetApp.getUi().alert(msg); } catch (e) { console.log(msg); }
+  return { trees: trees.length, gps: pts.length };
+}
+
+/** Run once from the editor to create the upload folder now (optional; it is also created on the first upload). */
+function setupUploadFolder() {
+  var f = uploadFolder_();
+  try { SpreadsheetApp.getUi().alert('Upload folder ready:\n' + f.getName() + '\n' + f.getUrl()); } catch (e) { console.log(f.getUrl()); }
 }
 
 function notify_(p, contact, batchId, acc) {
