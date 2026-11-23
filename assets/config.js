@@ -4,7 +4,7 @@
  * Leave it empty to run the site in demo mode with sample data (nothing is saved).
  */
 window.CHESTNUT_CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbyHwg4Cvc1o3nEJT_v8v7rRgaXct3gorKQ8cJZmD-2HINiJRwfefw8sMz_MOcwwwXBIdw/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbxPVAhHlY0Y41jZTe4Uzv-H9mApC6hZ3LmbCCjZ54f10pbU82TV-OeNGmMWYhVN1L3ebw/exec',
   CONTACT_EMAIL: 'richard.tegtmeier@rodaleinstitute.org',
   PROJECT_NAME: 'Chinese Chestnut Genotyping Project'
 };
